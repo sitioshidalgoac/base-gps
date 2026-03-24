@@ -755,25 +755,10 @@ let auth, rtdb, db;
    🔐  AUTENTICACIÓN
 ──────────────────────────────────────── */
 
-// Verifica que el usuario tenga rol de operadora o admin antes de mostrar la app
+// Acceso permitido para cualquier usuario autenticado de Firebase
 async function verifyAccess(user) {
-  try {
-    const token = await user.getIdTokenResult(true);
-    const rol   = token.claims.role || '';
-    if (token.claims.admin || rol === 'operadora' || rol === 'presidente' || rol === 'vigilancia') {
-      S.role = rol || 'operadora';
-      showApp();
-    } else {
-      console.warn('[Auth] Acceso denegado — rol:', rol);
-      document.getElementById('loginError').textContent =
-        'Tu cuenta no tiene permisos de operadora.';
-      if (auth) await auth.signOut();
-    }
-  } catch (_) {
-    // Si falla leer claims (ej. sin internet), permitir acceso con rol base
-    S.role = 'operadora';
-    showApp();
-  }
+  S.role = 'operadora';
+  showApp();
 }
 
 auth && auth.onAuthStateChanged(async (user) => {
