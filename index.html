@@ -971,6 +971,10 @@ function buildPopup(unitId, data) {
       ${base ? `Base: <b>${base}</b><br>` : ''}
       GPS: ${ts}
       ${data.lat ? `<br><small style="color:#64748b">${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</small>` : ''}
+      <hr style="margin:8px 0;border-color:#e2e8f0;">
+      <button onclick="deleteUnit('${unitId}')" style="background:#ef4444;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;width:100%;font-size:12px;font-weight:bold;">
+        Quitar Unidad
+      </button>
     </div>`;
 }
 
@@ -1237,6 +1241,9 @@ function renderUnits(now) {
         <div class="u-vel">${vel}</div>
         <div class="u-time">${ago}</div>
       </div>
+      <button onclick="event.stopPropagation(); deleteUnit('${uid}')" style="background:transparent;border:none;color:#ef4444;font-size:16px;cursor:pointer;padding:0 8px;margin-left:4px;" title="Quitar unidad">
+        🗑️
+      </button>
     </div>`;
   }).join('');
 }
@@ -1288,6 +1295,19 @@ async function dismissSOS() {
     } catch (_) {}
   }
   currentSOS = null;
+}
+
+/* ────────────────────────────────────────
+   🗑️  LIMPIEZA MANUAL (Quitar unidad)
+──────────────────────────────────────── */
+async function deleteUnit(unitId) {
+  if (!confirm(`¿Estás seguro de quitar la unidad ${unitId} del mapa?\n(Volverá a aparecer si abre la app de nuevo)`)) return;
+  try {
+    if (rtdb) await rtdb.ref(`unidades/${unitId}`).remove();
+    // El listener on('child_removed') se encarga de quitar el marcador automáticamente.
+  } catch (err) {
+    alert('Error al quitar unidad: ' + err.message);
+  }
 }
 
 /* ────────────────────────────────────────
