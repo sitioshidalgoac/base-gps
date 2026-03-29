@@ -726,23 +726,17 @@ let auth, rtdb, db;
     auth = firebase.auth();
     rtdb = firebase.database();
     db   = firebase.firestore();
-    console.log('[Firebase] ✅ Inicializado');
+
+    // ── PERSISTENCIA LOCAL ──────────────────────────────────────────────
+    // Mantiene la sesión activa aunque el usuario cierre la pestaña o
+    // recargue la página. Esencial para GitHub Pages y Netlify.
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .then(() => console.log('[Auth] ✅ Persistencia LOCAL configurada'))
+      .catch(e  => console.warn('[Auth] ⚠️ setPersistence error:', e.message));
+
+    console.log('[Firebase] ✅ Inicializado — proyecto:', FIREBASE_CONFIG.projectId);
   } catch (err) {
-    console.error('[Firebase] ❌ Error:', err);
-    // Intentar sin appId como fallback
-    try {
-      if (!firebase.apps.length) {
-        const cfg = { ...FIREBASE_CONFIG };
-        delete cfg.appId;
-        firebase.initializeApp(cfg);
-        auth = firebase.auth();
-        rtdb = firebase.database();
-        db   = firebase.firestore();
-        console.warn('[Firebase] ⚠️ Inicializado sin appId');
-      }
-    } catch (err2) {
-      console.error('[Firebase] ❌ Error crítico:', err2);
-    }
+    console.error('[Firebase] ❌ Error al inicializar:', err);
   }
 
   // Mostrar aviso si appId no está configurado
@@ -777,8 +771,14 @@ async function verifyAccess(user) {
 auth && auth.onAuthStateChanged(async (user) => {
   if (user) {
     S.user = user;
-    await verifyAccess(user);   // ← verifica claims ANTES de mostrar la app
+    console.log('[Auth] 🔑 Sesión activa:', user.email);
+    await verifyAccess(user);
   } else {
+    // Solo mostrar login si no hay sesión en curso
+    // (evita parpadeo al recargar con persistencia LOCAL)
+    if (S.user !== null) {
+      console.log('[Auth] 🔓 Sesión cerrada');
+    }
     S.user = null;
     tearDown();
     showLogin();
@@ -799,17 +799,28 @@ function doLogin() {
   btn.textContent = 'Verificando...';
 
   auth.signInWithEmailAndPassword(email, pass)
+    .then(cred => {
+      console.log('[Auth] ✅ Login exitoso:', cred.user.email);
+      // onAuthStateChanged se encargará de mostrar la app
+    })
     .catch(err => {
+      console.error('[Auth] ❌ Error de login — código:', err.code, '| mensaje:', err.message);
       const msgs = {
-        'auth/user-not-found':     'Usuario no registrado.',
-        'auth/wrong-password':     'Contraseña incorrecta.',
-        'auth/invalid-credential': 'Credenciales inválidas.',
-        'auth/invalid-email':      'Formato de correo inválido.',
-        'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
-        'auth/network-request-failed': 'Sin conexión. Verifica tu internet.',
-        'auth/unauthorized-domain': '⚠️ Dominio no autorizado en Firebase Auth. Agrégalo en la consola.'
+        'auth/user-not-found':          'Usuario no registrado en Firebase.',
+        'auth/wrong-password':          'Contraseña incorrecta.',
+        'auth/invalid-credential':      'Credenciales inválidas. Verifica correo y contraseña.',
+        'auth/invalid-email':           'Formato de correo inválido.',
+        'auth/too-many-requests':       '⛔ Cuenta bloqueada por demasiados intentos. Espera unos minutos o restablece la contraseña.',
+        'auth/network-request-failed':  '⚠️ Sin conexión a internet. Verifica tu red.',
+        'auth/unauthorized-domain':     '⚠️ Dominio no autorizado. Agrega sitioshidalgoac.github.io en Firebase Auth → Dominios autorizados.',
+        'auth/user-disabled':           'Esta cuenta está deshabilitada. Contacata al administrador.',
+        'auth/operation-not-allowed':   'El método de inicio de sesión por correo no está habilitado en Firebase.',
       };
-      errEl.textContent = msgs[err.code] || `Error: ${err.message}`;
+      // Mostrar mensaje amigable + código técnico para diagnóstico
+      const friendly = msgs[err.code];
+      errEl.textContent = friendly
+        ? `${friendly} [${err.code}]`
+        : `Error inesperado: ${err.message} [${err.code}]`;
     })
     .finally(() => {
       btn.disabled = false;
