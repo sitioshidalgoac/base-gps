@@ -19,11 +19,11 @@
           Dominios autorizados
   ═══════════════════════════════════════════════════════ -->
 
-  <!-- Firebase v10 Compat con Defer para optimizar peticiones y prevenir warnings síncronos -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase v10 Compat (Carga síncrona para disponibilidad inmediata en scripts del cuerpo) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <!-- Leaflet JS con defer -->
   
   <!-- Google Fonts - Rajdhani (display) + JetBrains Mono (IDs) -->
@@ -32,7 +32,7 @@
 
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Filtro para silenciar warnings nativos de librerías en Chrome (Quirks, XHR Sync, MouseEvent) -->
   <script>
