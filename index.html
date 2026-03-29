@@ -1078,12 +1078,13 @@ function renderPanel() {
 
   const sosCount = Object.keys(S.sosActivos).length;
 
-  // Stats
-  setText('stTotal', total);
+  // Stats (Solo contamos los que NO están en "Sin Señal")
+  const onlineCount = total - sinSenal;
+  setText('stTotal', onlineCount); 
   setText('stLibre', libre);
   setText('stOcup',  ocup);
   setText('stSOS',   sosCount);
-  setText('mapCount', total);
+  setText('mapCount', onlineCount);
 
   const sosStat = document.getElementById('sosStat');
   if (sosStat) sosStat.style.borderColor = sosCount > 0 ? 'var(--red)' : 'var(--border)';
