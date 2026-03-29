@@ -36,12 +36,14 @@
 
   <!-- Filtro para silenciar warnings nativos de librerías en Chrome (Quirks, XHR Sync, MouseEvent) -->
   <script>
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      const msg = args.join(' ');
-      if (msg.includes('Synchronous XMLHttpRequest') || msg.includes('MouseEvent') || msg.includes('Quirks')) return;
-      originalWarn.apply(console, args);
-    };
+    (function(){
+      const originalWarn = console.warn;
+      console.warn = function(...args) {
+        const msg = (args[0] || '').toString();
+        if (msg.includes('Synchronous XMLHttpRequest') || msg.includes('MouseEvent') || msg.includes('Quirks')) return;
+        originalWarn.apply(console, args);
+      };
+    })();
   </script>
 
   <style>
@@ -1038,6 +1040,64 @@ function focusBase(id) {
 /* ────────────────────────────────────────
    🔥  RTDB LISTENERS
 ──────────────────────────────────────── */
+/* ────────────────────────────────────────
+   🖥️  UI RENDERING (Fluidez 60fps)
+──────────────────────────────────────── */
+let _renderQueued = false;
+function queueRender() {
+  if (_renderQueued) return;
+  _renderQueued = true;
+  requestAnimationFrame(() => {
+    renderPanel();
+    _renderQueued = false;
+  });
+}
+
+function renderPanel() {
+  if (!S.map) return;
+  const now = getServerTime();
+  let total = 0, libre = 0, ocup = 0, sinSenal = 0;
+  const bCounts = {};
+  Object.keys(BASES).forEach(b => (bCounts[b] = 0));
+
+  Object.entries(S.unidades).forEach(([uid, d]) => {
+    total++;
+    const ts = d.ultimoReporte || d.hora_gps || d.timestamp || d.lastSeen || 0;
+    const offline = (now - ts) > OFFLINE_THRESHOLD_MS;
+    const st_val = d.estado || d.status;
+    
+    if (offline)           sinSenal++;
+    else if (st_val === 'libre')                       libre++;
+    else if (st_val === 'ocupado' || st_val === 'en_viaje') ocup++;
+
+    if (!offline && d.lat && d.lng) {
+      const b = calcBase(d.lat, d.lng);
+      if (b) bCounts[b]++;
+    }
+  });
+
+  const sosCount = Object.keys(S.sosActivos).length;
+
+  // Stats
+  setText('stTotal', total);
+  setText('stLibre', libre);
+  setText('stOcup',  ocup);
+  setText('stSOS',   sosCount);
+  setText('mapCount', total);
+
+  const sosStat = document.getElementById('sosStat');
+  if (sosStat) sosStat.style.borderColor = sosCount > 0 ? 'var(--red)' : 'var(--border)';
+
+  // Bases
+  renderBases(bCounts);
+
+  // Unit list
+  renderUnits(now);
+
+  // Timestamp
+  document.getElementById('lastUpdate').textContent = fmtTime(now);
+}
+
 function startListeners() {
   listenUnidades();
   listenSOS();
@@ -1055,7 +1115,7 @@ function listenUnidades() {
     const uid = snap.key;
     S.unidades[uid] = { ...fresh, unitId: uid };
     upsertMarker(uid, S.unidades[uid]);
-    renderPanel();
+    queueRender();
   }, err => {
     console.error('[RTDB:unidades]', err);
     setConn(false);
@@ -1067,14 +1127,14 @@ function listenUnidades() {
     const uid = snap.key;
     S.unidades[uid] = { ...fresh, unitId: uid };
     upsertMarker(uid, S.unidades[uid]);
-    renderPanel();
+    queueRender();
   });
 
   ref.on('child_removed', snap => {
     const uid = snap.key;
     removeMarker(uid);
     delete S.unidades[uid];
-    renderPanel();
+    queueRender();
   });
 
   S.rtdbRefs.push({ ref, ev: 'child_added' });
