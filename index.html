@@ -705,7 +705,7 @@ const BASES = {
 /* ────────────────────────────────────────
    ⚙️  CONSTANTES
 ──────────────────────────────────────── */
-const OFFLINE_THRESHOLD_MS = 60 * 1000;  // 1 min sin señal = offline
+const OFFLINE_THRESHOLD_MS = 120 * 1000;  // 2 mins sin señal = offline
 const UI_REFRESH_MS        = 30 * 1000;       // re-render cada 30s (timeouts)
 
 const STATUS_COLOR = {
@@ -943,7 +943,7 @@ function calcBase(lat, lng) {
 ──────────────────────────────────────── */
 function unitColor(unitId, data) {
   if (S.sosActivos[unitId]) return STATUS_COLOR.sos;
-  const ts = data.hora_gps || data.timestamp || data.lastSeen || 0;
+  const ts = data.ultimoReporte || data.hora_gps || data.timestamp || data.lastSeen || 0;
   const offline = (getServerTime() - ts) > OFFLINE_THRESHOLD_MS;
   if (offline) return STATUS_COLOR.sin_senal;
   return STATUS_COLOR[data.estado || data.status] || STATUS_COLOR.libre;
@@ -973,7 +973,7 @@ function buildUnitIcon(unitId, data) {
 }
 
 function buildPopup(unitId, data) {
-  const ts_val = data.hora_gps || data.timestamp || data.lastSeen || 0;
+  const ts_val  = data.ultimoReporte || data.hora_gps || data.timestamp || data.lastSeen || 0;
   const offline = (getServerTime() - ts_val) > OFFLINE_THRESHOLD_MS;
   const base    = (!offline && data.lat && data.lng) ? calcBase(data.lat, data.lng) : null;
   const vel_val = data.velocidad != null ? data.velocidad : data.speed;
@@ -1180,7 +1180,7 @@ function renderPanel() {
 
   Object.entries(S.unidades).forEach(([uid, d]) => {
     total++;
-    const ts = d.hora_gps || d.timestamp || d.lastSeen || 0;
+    const ts = d.ultimoReporte || d.hora_gps || d.timestamp || d.lastSeen || 0;
     const offline = (now - ts) > OFFLINE_THRESHOLD_MS;
     const st_val = d.estado || d.status;
     
@@ -1239,7 +1239,7 @@ function renderUnits(now) {
   }
 
   el.innerHTML = entries.map(([uid, d]) => {
-    const ts = d.hora_gps || d.timestamp || d.lastSeen || 0;
+    const ts = d.ultimoReporte || d.hora_gps || d.timestamp || d.lastSeen || 0;
     const offline = (now - ts) > OFFLINE_THRESHOLD_MS;
     const isSOS   = !!S.sosActivos[uid];
     const color   = unitColor(uid, d);
