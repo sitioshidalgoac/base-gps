@@ -16,12 +16,29 @@
           Dominios autorizados
   ═══════════════════════════════════════════════════════ -->
 
+  <!-- Firebase v10 Compat con Defer para optimizar peticiones y prevenir warnings síncronos -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <!-- Leaflet JS con defer -->
+  
   <!-- Google Fonts - Rajdhani (display) + JetBrains Mono (IDs) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Filtro para silenciar warnings nativos de librerías en Chrome (Quirks, XHR Sync, MouseEvent) -->
+  <script>
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+      const msg = args.join(' ');
+      if (msg.includes('Synchronous XMLHttpRequest') || msg.includes('MouseEvent') || msg.includes('Quirks')) return;
+      originalWarn.apply(console, args);
+    };
+  </script>
 
   <style>
     /* ═══════════════════════════════════════════
@@ -349,7 +366,7 @@
        MAP AREA
     ═══════════════════════════════════════ */
     #mapWrap { flex: 1; position: relative; overflow: hidden; }
-    #map { position: absolute; inset: 0; }
+    #map { position: absolute; inset: 0; touch-action: none; }
 
     /* FDS BANNER */
     #fdsBanner {
@@ -965,7 +982,10 @@ function buildPopup(unitId, data) {
   const st_val  = data.estado || data.status || 'libre';
   return `
     <div style="font-family:'Rajdhani',sans-serif;min-width:140px">
-      <b style="font-family:'JetBrains Mono',monospace;font-size:14px">${unitId}</b><br>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#1a56db;">${unitId}</b>
+        <span style="font-size:12px;color:#475569;font-weight:600;">${data.name || data.conductor || ''}</span>
+      </div>
       Estado: <b>${offline ? 'Sin señal' : st_val}</b><br>
       Velocidad: ${vel}<br>
       ${base ? `Base: <b>${base}</b><br>` : ''}
@@ -1234,7 +1254,7 @@ function renderUnits(now) {
     return `<div class="unit-row ${cls}" onclick="focusUnit('${uid}')">
       <div class="u-dot" style="background:${color}"></div>
       <div style="flex:1;overflow:hidden">
-        <div class="u-id">${uid}</div>
+        <div class="u-id">${uid} <span style="font-size:11px;color:#64748b;font-weight:600;margin-left:4px;">${d.name || d.conductor || ''}</span></div>
         <div class="u-estado">${estado}</div>
       </div>
       <div class="u-info">
