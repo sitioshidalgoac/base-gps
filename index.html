@@ -34,13 +34,19 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Filtro para silenciar warnings nativos de librerías en Chrome (Quirks, XHR Sync, MouseEvent) -->
+  <!-- Filtro para silenciar warnings nativos de librerías en Chrome (Quirks, XHR Sync, MouseEvent, mozPressure) -->
   <script>
     (function(){
       const originalWarn = console.warn;
       console.warn = function(...args) {
         const msg = (args[0] || '').toString();
-        if (msg.includes('Synchronous XMLHttpRequest') || msg.includes('MouseEvent') || msg.includes('Quirks')) return;
+        if (
+          msg.includes('Synchronous XMLHttpRequest') || 
+          msg.includes('MouseEvent') || 
+          msg.includes('Quirks') ||
+          msg.includes('mozPressure') ||
+          msg.includes('mozInputSource')
+        ) return;
         originalWarn.apply(console, args);
       };
     })();
@@ -941,7 +947,12 @@ function calcBase(lat, lng) {
 function unitColor(unitId, data) {
   if (S.sosActivos[unitId]) return STATUS_COLOR.sos;
   const ts = data.ultimoReporte || data.hora_gps || data.timestamp || data.lastSeen || 0;
-  const offline = (getServerTime() - ts) > OFFLINE_THRESHOLD_MS;
+  
+  // Lógica de "Forzar Online": Si tiene 'online:true' y el reporte tiene < 5 min, se queda en color. 
+  // Esto corrige desfases de reloj en celulares.
+  const diff = getServerTime() - ts;
+  const offline = (data.online === false) || (diff > (OFFLINE_THRESHOLD_MS * 2.5)); // 5 min de gracia total
+  
   if (offline) return STATUS_COLOR.sin_senal;
   return STATUS_COLOR[data.estado || data.status] || STATUS_COLOR.libre;
 }
@@ -971,7 +982,8 @@ function buildUnitIcon(unitId, data) {
 
 function buildPopup(unitId, data) {
   const ts_val  = data.ultimoReporte || data.hora_gps || data.timestamp || data.lastSeen || 0;
-  const offline = (getServerTime() - ts_val) > OFFLINE_THRESHOLD_MS;
+  const diff    = getServerTime() - ts_val;
+  const offline = (data.online === false) || (diff > (OFFLINE_THRESHOLD_MS * 2.5));
   const base    = (!offline && data.lat && data.lng) ? calcBase(data.lat, data.lng) : null;
   const vel_val = data.velocidad != null ? data.velocidad : data.speed;
   const vel     = vel_val != null ? `${Math.round(vel_val)} km/h` : '—';
