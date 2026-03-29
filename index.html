@@ -688,7 +688,7 @@ const BASES = {
 /* ────────────────────────────────────────
    ⚙️  CONSTANTES
 ──────────────────────────────────────── */
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;  // 5 min sin señal = offline
+const OFFLINE_THRESHOLD_MS = 60 * 1000;  // 1 min sin señal = offline
 const UI_REFRESH_MS        = 30 * 1000;       // re-render cada 30s (timeouts)
 
 const STATUS_COLOR = {
@@ -714,6 +714,11 @@ const S = {
   markers:     {},   // { [unitId]: L.Marker }
   rtdbRefs:    []    // refs para limpiar en logout
 };
+
+let fbServerTimeOffset = 0;
+function getServerTime() {
+  return Date.now() + fbServerTimeOffset;
+}
 
 /* ────────────────────────────────────────
    🔥  FIREBASE — INIT
@@ -922,7 +927,7 @@ function calcBase(lat, lng) {
 function unitColor(unitId, data) {
   if (S.sosActivos[unitId]) return STATUS_COLOR.sos;
   const ts = data.hora_gps || data.timestamp || data.lastSeen || 0;
-  const offline = (Date.now() - ts) > OFFLINE_THRESHOLD_MS;
+  const offline = (getServerTime() - ts) > OFFLINE_THRESHOLD_MS;
   if (offline) return STATUS_COLOR.sin_senal;
   return STATUS_COLOR[data.estado || data.status] || STATUS_COLOR.libre;
 }
@@ -952,7 +957,7 @@ function buildUnitIcon(unitId, data) {
 
 function buildPopup(unitId, data) {
   const ts_val = data.hora_gps || data.timestamp || data.lastSeen || 0;
-  const offline = (Date.now() - ts_val) > OFFLINE_THRESHOLD_MS;
+  const offline = (getServerTime() - ts_val) > OFFLINE_THRESHOLD_MS;
   const base    = (!offline && data.lat && data.lng) ? calcBase(data.lat, data.lng) : null;
   const vel_val = data.velocidad != null ? data.velocidad : data.speed;
   const vel     = vel_val != null ? `${Math.round(vel_val)} km/h` : '—';
@@ -1025,28 +1030,37 @@ function startListeners() {
 function listenUnidades() {
   const ref = rtdb.ref('unidades');
 
-  ref.on('value', snap => {
-    const fresh = snap.val() || {};
-
-    // Eliminar unidades que ya no existen
-    Object.keys(S.unidades).forEach(uid => {
-      if (!fresh[uid]) { removeMarker(uid); delete S.unidades[uid]; }
-    });
-
-    // Agregar / actualizar
-    Object.entries(fresh).forEach(([uid, val]) => {
-      if (typeof val !== 'object' || !val) return;
-      S.unidades[uid] = { ...val, unitId: uid };
-      upsertMarker(uid, S.unidades[uid]);
-    });
-
+  ref.on('child_added', snap => {
+    const fresh = snap.val();
+    if (!fresh) return;
+    const uid = snap.key;
+    S.unidades[uid] = { ...fresh, unitId: uid };
+    upsertMarker(uid, S.unidades[uid]);
     renderPanel();
   }, err => {
     console.error('[RTDB:unidades]', err);
     setConn(false);
   });
 
-  S.rtdbRefs.push({ ref, ev: 'value' });
+  ref.on('child_changed', snap => {
+    const fresh = snap.val();
+    if (!fresh) return;
+    const uid = snap.key;
+    S.unidades[uid] = { ...fresh, unitId: uid };
+    upsertMarker(uid, S.unidades[uid]);
+    renderPanel();
+  });
+
+  ref.on('child_removed', snap => {
+    const uid = snap.key;
+    removeMarker(uid);
+    delete S.unidades[uid];
+    renderPanel();
+  });
+
+  S.rtdbRefs.push({ ref, ev: 'child_added' });
+  S.rtdbRefs.push({ ref, ev: 'child_changed' });
+  S.rtdbRefs.push({ ref, ev: 'child_removed' });
 }
 
 /* — SOS — */
@@ -1101,6 +1115,12 @@ function listenConnection() {
   const ref = rtdb.ref('.info/connected');
   ref.on('value', snap => setConn(!!snap.val()));
   S.rtdbRefs.push({ ref, ev: 'value' });
+
+  const refTime = rtdb.ref('.info/serverTimeOffset');
+  refTime.on('value', snap => {
+    fbServerTimeOffset = snap.val() || 0;
+  });
+  S.rtdbRefs.push({ ref: refTime, ev: 'value' });
 }
 
 /* ────────────────────────────────────────
@@ -1128,7 +1148,8 @@ function updateFDSUI(activo) {
    🎛️  PANEL — RENDER
 ──────────────────────────────────────── */
 function renderPanel() {
-  const now = Date.now();
+  // Sincronizar el reloj del front con el de Firebase
+  const now = getServerTime();
   let total = 0, libre = 0, ocup = 0, sinSenal = 0;
   const bCounts = {};
   Object.keys(BASES).forEach(b => (bCounts[b] = 0));
