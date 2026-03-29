@@ -921,9 +921,10 @@ function calcBase(lat, lng) {
 ──────────────────────────────────────── */
 function unitColor(unitId, data) {
   if (S.sosActivos[unitId]) return STATUS_COLOR.sos;
-  const offline = (Date.now() - (data.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
+  const ts = data.hora_gps || data.timestamp || data.lastSeen || 0;
+  const offline = (Date.now() - ts) > OFFLINE_THRESHOLD_MS;
   if (offline) return STATUS_COLOR.sin_senal;
-  return STATUS_COLOR[data.estado] || STATUS_COLOR.libre;
+  return STATUS_COLOR[data.estado || data.status] || STATUS_COLOR.libre;
 }
 
 function buildUnitIcon(unitId, data) {
@@ -950,14 +951,17 @@ function buildUnitIcon(unitId, data) {
 }
 
 function buildPopup(unitId, data) {
-  const offline = (Date.now() - (data.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
+  const ts_val = data.hora_gps || data.timestamp || data.lastSeen || 0;
+  const offline = (Date.now() - ts_val) > OFFLINE_THRESHOLD_MS;
   const base    = (!offline && data.lat && data.lng) ? calcBase(data.lat, data.lng) : null;
-  const vel     = data.velocidad != null ? `${Math.round(data.velocidad)} km/h` : '—';
-  const ts      = data.hora_gps  ? new Date(data.hora_gps).toLocaleTimeString('es-MX') : '—';
+  const vel_val = data.velocidad != null ? data.velocidad : data.speed;
+  const vel     = vel_val != null ? `${Math.round(vel_val)} km/h` : '—';
+  const ts      = ts_val ? new Date(ts_val).toLocaleTimeString('es-MX') : '—';
+  const st_val  = data.estado || data.status || 'libre';
   return `
     <div style="font-family:'Rajdhani',sans-serif;min-width:140px">
       <b style="font-family:'JetBrains Mono',monospace;font-size:14px">${unitId}</b><br>
-      Estado: <b>${offline ? 'Sin señal' : (data.estado || 'libre')}</b><br>
+      Estado: <b>${offline ? 'Sin señal' : st_val}</b><br>
       Velocidad: ${vel}<br>
       ${base ? `Base: <b>${base}</b><br>` : ''}
       GPS: ${ts}
@@ -1131,10 +1135,13 @@ function renderPanel() {
 
   Object.entries(S.unidades).forEach(([uid, d]) => {
     total++;
-    const offline = (now - (d.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
+    const ts = d.hora_gps || d.timestamp || d.lastSeen || 0;
+    const offline = (now - ts) > OFFLINE_THRESHOLD_MS;
+    const st_val = d.estado || d.status;
+    
     if (offline)           sinSenal++;
-    else if (d.estado === 'libre')                       libre++;
-    else if (d.estado === 'ocupado' || d.estado === 'en_viaje') ocup++;
+    else if (st_val === 'libre')                       libre++;
+    else if (st_val === 'ocupado' || st_val === 'en_viaje') ocup++;
 
     if (!offline && d.lat && d.lng) {
       const b = calcBase(d.lat, d.lng);
@@ -1187,13 +1194,16 @@ function renderUnits(now) {
   }
 
   el.innerHTML = entries.map(([uid, d]) => {
-    const offline = (now - (d.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
+    const ts = d.hora_gps || d.timestamp || d.lastSeen || 0;
+    const offline = (now - ts) > OFFLINE_THRESHOLD_MS;
     const isSOS   = !!S.sosActivos[uid];
     const color   = unitColor(uid, d);
     const base    = (!offline && d.lat && d.lng) ? calcBase(d.lat, d.lng) : null;
-    const estado  = isSOS ? '🆘 SOS' : offline ? 'Sin señal' : (base || d.estado || 'libre');
-    const vel     = d.velocidad != null ? `${Math.round(d.velocidad)}km/h` : '—';
-    const ago     = d.hora_gps ? timeAgo(d.hora_gps) : '—';
+    const st_val  = d.estado || d.status || 'libre';
+    const estado  = isSOS ? '🆘 SOS' : offline ? 'Sin señal' : (base || st_val);
+    const vel_val = d.velocidad != null ? d.velocidad : d.speed;
+    const vel     = vel_val != null ? `${Math.round(vel_val)}km/h` : '—';
+    const ago     = ts ? timeAgo(ts) : '—';
     const cls     = isSOS ? 'sos-item' : offline ? 'offline-item' : '';
 
     return `<div class="unit-row ${cls}" onclick="focusUnit('${uid}')">
@@ -1267,7 +1277,7 @@ function setConn(ok) {
   const txt = document.getElementById('connText');
   if (!dot) return;
   dot.className = 'conn-dot' + (ok ? ' ok' : '');
-  txt.textContent = ok ? 'En línea' : 'Sin conexión';
+  txt.textContent = ok ? 'Conectado' : 'Sin conexión';
 }
 
 /* ────────────────────────────────────────
