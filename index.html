@@ -587,193 +587,78 @@
 
   
     /* ═══════════════════════════════════════════
-       HEATMAP & RUTAS — Mission Control
+       COLA DE ESPERA + DETECTOR FANTASMA
     ═══════════════════════════════════════════ */
-    .map-controls {
-      position: absolute; top: 10px; right: 10px; z-index: 1000;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .map-ctrl-btn {
-      background: var(--bg-panel); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text-dim);
-      font-family: var(--font-ui); font-size: 10px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase;
-      padding: 7px 10px; cursor: pointer;
-      transition: all 0.2s; white-space: nowrap;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .map-ctrl-btn:hover { border-color: var(--border-lit); color: var(--text); }
-    .map-ctrl-btn.activo { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
 
-    /* Panel flotante de rutas */
-    #panel-rutas {
-      position: absolute; bottom: 48px; left: 10px; z-index: 1000;
-      background: var(--bg-panel); border: 1px solid var(--border);
-      border-radius: var(--radius); width: 240px;
-      max-height: 320px; overflow-y: auto;
-      display: none;
+    /* Tab cola */
+    #colaTabBtn { position: relative; }
+    #colaBadge {
+      background: #3b82f6; color: #fff;
+      font-size: 9px; font-weight: 700;
+      border-radius: 8px; padding: 1px 5px;
+      display: none; margin-left: 3px;
     }
-    #panel-rutas.visible { display: block; }
-    .rutas-header {
-      padding: 10px 12px; border-bottom: 1px solid var(--border);
-      font-size: 9px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--text-dim);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .rutas-header span { color: var(--amber); }
-    .ruta-item {
-      padding: 9px 12px; border-bottom: 1px solid var(--border);
-      cursor: pointer; transition: background 0.15s;
-    }
-    .ruta-item:hover { background: var(--bg-hover); }
-    .ruta-item:last-child { border-bottom: none; }
-    .ruta-rank {
-      font-family: var(--font-mono); font-size: 10px;
-      color: var(--amber); margin-bottom: 3px;
-    }
-    .ruta-nombre { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-    .ruta-stats { font-size: 10px; color: var(--text-dim); display: flex; gap: 8px; }
-    .ruta-stat-val { color: var(--green); font-weight: 700; }
+    #colaBadge.visible { display: inline; }
 
-    /* Leyenda heatmap */
-    #heatmap-legend {
-      position: absolute; bottom: 48px; right: 10px; z-index: 1000;
-      background: var(--bg-panel); border: 1px solid var(--border);
+    /* Panel cola de espera */
+    #colaView {
+      display: none; flex-direction: column;
+      height: 100%; overflow-y: auto;
+      background: var(--bg-panel);
+    }
+    #colaView.activo { display: flex; }
+
+    .cola-item {
+      background: var(--bg-card); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 10px 12px;
-      display: none; min-width: 130px;
+      margin-bottom: 6px; display: flex;
+      align-items: center; gap: 10px;
+      transition: border-color 0.2s;
     }
-    #heatmap-legend.visible { display: block; }
-    .heat-leg-title {
-      font-size: 9px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;
+    .cola-item.asignando { border-color: var(--amber); }
+    .cola-pos {
+      font-family: var(--font-mono); font-size: 18px;
+      font-weight: 700; color: var(--amber);
+      min-width: 28px; text-align: center;
     }
-    .heat-gradient {
-      height: 8px; border-radius: 4px; margin-bottom: 6px;
-      background: linear-gradient(to right, #3b82f6, #22c55e, #eab308, #ef4444);
+    .cola-info { flex: 1; }
+    .cola-usuario { font-size: 12px; font-weight: 600; color: var(--text); }
+    .cola-espera  { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+    .cola-dist    { font-size: 10px; color: var(--green); font-weight: 700; }
+    .cola-conductor {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--blue); text-align: right;
     }
-    .heat-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); }
+    .cola-empty {
+      text-align: center; padding: 24px 16px;
+      color: var(--text-dim); font-size: 12px;
+    }
 
-  
-    /* ═══════════════════════════════════════════
-       MÓDULO HEATMAP & RUTAS FRECUENTES
-    ═══════════════════════════════════════════ */
-
-    /* Botones de control sobre el mapa */
-    .map-controls {
-      position: absolute; top: 10px; right: 10px; z-index: 1000;
-      display: flex; flex-direction: column; gap: 6px;
+    /* Fantasmas */
+    .fantasma-card {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid var(--red); border-radius: var(--radius);
+      padding: 10px 12px; margin-bottom: 6px;
+      animation: pulseCal 2s infinite;
     }
-    .map-ctrl-btn {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 7px 12px;
-      font-family: var(--font-ui); font-size: 11px; font-weight: 600;
-      letter-spacing: 0.5px; color: var(--text-dim);
-      cursor: pointer; transition: all 0.2s; white-space: nowrap;
-      display: flex; align-items: center; gap: 6px;
+    .fantasma-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 4px;
     }
-    .map-ctrl-btn:hover { border-color: var(--border-lit); color: var(--text); }
-    .map-ctrl-btn.activo { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
-
-    /* Panel lateral de rutas frecuentes */
-    #rutasPanel {
-      position: absolute; top: 0; right: 0; bottom: 0;
-      width: 260px; background: var(--bg-panel);
-      border-left: 1px solid var(--border);
-      z-index: 999; display: none; flex-direction: column;
-      overflow: hidden;
+    .fantasma-unidad {
+      font-family: var(--font-mono); font-size: 13px;
+      font-weight: 700; color: #fef2f2;
     }
-    #rutasPanel.visible { display: flex; }
-    .rutas-header {
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
+    .fantasma-tiempo { font-size: 11px; color: var(--red); font-weight: 700; }
+    .fantasma-ultima { font-size: 10px; color: #7f1d1d; }
+    .btn-fantasma-ok {
+      width: 100%; margin-top: 8px; padding: 6px;
+      background: var(--red-dim); border: 1px solid var(--red);
+      border-radius: var(--radius); color: #fca5a5;
+      font-size: 11px; font-weight: 700; font-family: var(--font-ui);
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
     }
-    .rutas-titulo {
-      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; color: var(--amber);
-    }
-    .rutas-close {
-      background: none; border: none; color: var(--text-dim);
-      font-size: 16px; cursor: pointer; padding: 0; line-height: 1;
-    }
-    .rutas-close:hover { color: var(--text); }
-
-    /* Tabs dentro del panel */
-    .rutas-tabs {
-      display: flex; border-bottom: 1px solid var(--border);
-    }
-    .rutas-tab {
-      flex: 1; padding: 8px 6px; text-align: center;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
-      text-transform: uppercase; color: var(--text-dim);
-      cursor: pointer; border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-    }
-    .rutas-tab.activo { color: var(--amber); border-bottom-color: var(--amber); }
-
-    .rutas-body { flex: 1; overflow-y: auto; padding: 10px; }
-
-    /* Tarjeta de ruta */
-    .ruta-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px;
-      cursor: pointer; transition: border-color 0.2s;
-    }
-    .ruta-card:hover { border-color: var(--border-lit); }
-    .ruta-card.destacada { border-color: var(--amber); }
-    .ruta-rank { font-size: 9px; color: var(--text-dim); margin-bottom: 4px; }
-    .ruta-origen { font-size: 12px; font-weight: 700; color: var(--text); }
-    .ruta-flecha { font-size: 10px; color: var(--text-dim); margin: 2px 0; }
-    .ruta-destino { font-size: 12px; color: var(--text-mid); }
-    .ruta-stats {
-      display: flex; gap: 8px; margin-top: 8px;
-      padding-top: 8px; border-top: 1px solid var(--border);
-    }
-    .ruta-stat { flex: 1; text-align: center; }
-    .ruta-stat-n { font-family: var(--font-mono); font-size: 16px; font-weight: 700; display: block; }
-    .ruta-stat-n.verde { color: var(--green); }
-    .ruta-stat-n.amber { color: var(--amber); }
-    .ruta-stat-n.azul  { color: var(--blue); }
-    .ruta-stat-l { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
-
-    /* Zona de demanda */
-    .zona-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px;
-      cursor: pointer; transition: border-color 0.2s;
-    }
-    .zona-card:hover { border-color: var(--border-lit); }
-    .zona-header { display: flex; justify-content: space-between; align-items: center; }
-    .zona-nombre { font-size: 12px; font-weight: 700; }
-    .zona-badge {
-      font-size: 9px; padding: 2px 7px; border-radius: 8px;
-      font-weight: 700; letter-spacing: 0.5px;
-    }
-    .zona-badge.alta   { background: rgba(239,68,68,0.15);   color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
-    .zona-badge.media  { background: rgba(245,158,11,0.15);  color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
-    .zona-badge.normal { background: var(--green-dim);        color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
-    .zona-solicitudes { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
-    .zona-barra {
-      height: 3px; background: var(--border); border-radius: 2px;
-      margin-top: 8px; overflow: hidden;
-    }
-    .zona-barra-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
-
-    /* Leyenda heatmap */
-    .heat-legend {
-      position: absolute; bottom: 36px; left: 10px; z-index: 1000;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 8px 12px;
-      display: none;
-    }
-    .heat-legend.visible { display: block; }
-    .heat-legend-title { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-    .heat-gradient {
-      width: 120px; height: 8px; border-radius: 4px;
-      background: linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
-      margin-bottom: 4px;
-    }
-    .heat-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); }
+    .btn-fantasma-ok:hover { background: rgba(239,68,68,0.25); }
 
   </style>
 </head>
@@ -850,6 +735,12 @@
 
     <button class="cal-tab-btn" id="calTabBtn" onclick="toggleCalView()">
       ⭐ CALIF <span class="cal-badge" id="calBadge">0</span>
+    </button>
+    <button class="cal-tab-btn" id="colaTabBtn" onclick="toggleColaView()">
+      🔢 COLA <span class="cal-badge" id="colaBadge" style="background:#3b82f6">0</span>
+    </button>
+    <button class="cal-tab-btn" id="fantasmaTabBtn" onclick="toggleFantasmaView()">
+      👻 FANTASMAS <span class="cal-badge" id="fantasmaBadge">0</span>
     </button>
     <button class="hbtn hbtn-fds" id="fdsBtn" onclick="toggleFDS()">
       ⚠ FDS
@@ -933,39 +824,54 @@
       </div>
     </div>
 
+    <!-- ══ PANEL COLA DE ESPERA ══ -->
+    <div id="colaView">
+      <div class="ps-cal">
+        <div class="ps-title">📋 Solicitudes en espera</div>
+        <div class="cal-stats-row">
+          <div class="cal-stat">
+            <span class="cal-stat-n azul" id="colaStatEspera">0</span>
+            <span class="cal-stat-l">En espera</span>
+          </div>
+          <div class="cal-stat">
+            <span class="cal-stat-n verde" id="colaStatAsignadas">0</span>
+            <span class="cal-stat-l">Asignadas hoy</span>
+          </div>
+          <div class="cal-stat">
+            <span class="cal-stat-n" id="colaStatTiempo" style="color:var(--amber)">—</span>
+            <span class="cal-stat-l">Espera prom.</span>
+          </div>
+        </div>
+      </div>
+      <div class="ps-cal" style="flex:1;overflow-y:auto">
+        <div class="ps-title">Fila actual</div>
+        <div id="colaLista">
+          <div class="cola-empty">Sin solicitudes pendientes ✅</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PANEL FANTASMAS ══ -->
+    <div id="fantasmaView" style="display:none;flex-direction:column;height:100%;overflow-y:auto;background:var(--bg-panel)">
+      <div class="ps-cal">
+        <div class="ps-title">👻 Unidades sin señal +30 min</div>
+        <p style="font-size:11px;color:var(--text-dim);margin:0">
+          Unidades en turno que dejaron de reportar su GPS
+        </p>
+      </div>
+      <div class="ps-cal" style="flex:1;overflow-y:auto">
+        <div id="fantasmaLista">
+          <div class="cola-empty" style="color:var(--green)">
+            ✅ Todas las unidades reportando correctamente
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ MAP AREA ══ -->
     <div id="mapWrap">
       <div id="fdsBanner">⚠ SISTEMA FUERA DE SERVICIO — Unidades en espera</div>
       <div id="map"></div>
-
-      <!-- Controles del mapa -->
-      <div class="map-controls">
-        <button class="map-ctrl-btn" id="btnHeatmap" onclick="toggleHeatmap()">
-          🔥 DEMANDA
-        </button>
-        <button class="map-ctrl-btn" id="btnRutas" onclick="togglePanelRutas()">
-          🗺 RUTAS
-        </button>
-      </div>
-
-      <!-- Panel de rutas frecuentes -->
-      <div id="panel-rutas">
-        <div class="rutas-header">
-          Rutas más rentables <span id="rutas-periodo">Hoy</span>
-        </div>
-        <div id="rutas-lista">
-          <div style="padding:16px;font-size:11px;color:var(--text-dim);text-align:center">
-            Acumulando datos...
-          </div>
-        </div>
-      </div>
-
-      <!-- Leyenda heatmap -->
-      <div id="heatmap-legend">
-        <div class="heat-leg-title">Demanda de viajes</div>
-        <div class="heat-gradient"></div>
-        <div class="heat-labels"><span>Baja</span><span>Media</span><span>Alta</span></div>
-      </div>
 
       <div class="map-bar">
         Unidades: <b id="mapCount">0</b> &nbsp;|&nbsp;
@@ -1008,8 +914,6 @@
 
 <!-- LEAFLET -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <script>
 /* ================================================================
@@ -1138,8 +1042,8 @@ let auth, rtdb, db;
 async function verifyAccess(user) {
   S.role = 'operadora';
   showApp();
-  // Iniciar sistema de calificaciones en tiempo real
   if (typeof iniciarSistemaCalificaciones === 'function') iniciarSistemaCalificaciones();
+  if (typeof iniciarCola === 'function') iniciarCola();
 }
 
 auth && auth.onAuthStateChanged(async (user) => {
@@ -1211,8 +1115,6 @@ function initMap() {
 
   drawBases();
   console.log('[Mapa] ✅ Inicializado — Nochixtlán');
-  // Iniciar módulo heatmap
-  if (typeof iniciarHeatmap === 'function') iniciarHeatmap();
 }
 
 function drawBases() {
@@ -1673,8 +1575,8 @@ function showLogin() {
 function tearDown() {
   // Limpiar sistema de calificaciones
   if (typeof destruirSistemaCalificaciones === 'function') destruirSistemaCalificaciones();
-  // Limpiar heatmap
-  if (typeof destruirHeatmap === 'function') destruirHeatmap();
+  // Limpiar cola de espera
+  if (typeof destruirCola === 'function') destruirCola();
   // Limpiar heatmap
   if (typeof destruirHeatmap === 'function') destruirHeatmap();
   // Detach TODOS los listeners de cada ref registrada
@@ -2039,656 +1941,263 @@ function cerrarHistorialCal() {
 <script>
 
 // ══════════════════════════════════════════════════════════════
-// MÓDULO: HEATMAP DE DEMANDA + RUTAS FRECUENTES
+// MÓDULO 1: COLA DE ESPERA INTELIGENTE
 // ══════════════════════════════════════════════════════════════
+const COLA_TIEMPO_MAX_ESPERA = 15 * 60 * 1000; // 15 min antes de alertar
+let _colaListeners   = [];
+let _colaActivo      = false;
+let _fantasmaActivo  = false;
+let _colaSolicitudes = {};   // solicitudesId → datos
+let _colaAsignadasHoy = 0;
+let _fantasmaInterv  = null;
+let _tiemposEspera   = [];
 
-const HEATMAP_CONFIG = {
-  radius:    35,
-  blur:      25,
-  maxZoom:   17,
-  max:       1.0,
-  gradient:  { 0.2: '#3b82f6', 0.4: '#22c55e', 0.65: '#eab308', 1.0: '#ef4444' }
-};
-
-// Estado del módulo
-let _heatLayer       = null;
-let _heatActivo      = false;
-let _rutasActivas    = false;
-let _rutaLines       = [];
-let _heatListener    = null;
-let _heatData        = [];  // [{lat, lng, intensity}]
-let _rutasData       = [];  // [{origen, destino, viajes, ingresos}]
-let _heatInterval    = null;
-
-// ── Iniciar heatmap (llamar después de initMap) ───────────────
-function iniciarHeatmap() {
-  _escucharSolicitudes();
-  _calcularRutasFrecuentes();
-  // Recalcular rutas cada 5 minutos
-  _heatInterval = setInterval(_calcularRutasFrecuentes, 5 * 60 * 1000);
-}
-
-function destruirHeatmap() {
-  if (_heatListener) { _heatListener(); _heatListener = null; }
-  if (_heatInterval) { clearInterval(_heatInterval); _heatInterval = null; }
-  if (_heatLayer && S.map) { S.map.removeLayer(_heatLayer); _heatLayer = null; }
-  _rutaLines.forEach(l => { try { S.map.removeLayer(l); } catch(_){} });
-  _rutaLines = [];
-}
-
-// ── Escuchar solicitudes en Firebase para heatmap ────────────
-function _escucharSolicitudes() {
-  // Tomar solicitudes de las últimas 8 horas para el heatmap
-  const hace8h = Date.now() - 8 * 60 * 60 * 1000;
-  const ref = rtdb.ref('/solicitudes')
-    .orderByChild('timestamp').startAt(hace8h);
-
-  _heatListener = ref.on('value', snap => {
-    _heatData = [];
-    snap.forEach(child => {
-      const s = child.val();
-      // Punto de origen del viaje
-      if (s.origen_lat && s.origen_lng) {
-        _heatData.push([s.origen_lat, s.origen_lng, 1.0]);
-      }
-      // Punto de destino con menor intensidad
-      if (s.destino_lat && s.destino_lng) {
-        _heatData.push([s.destino_lat, s.destino_lng, 0.6]);
-      }
-    });
-
-    // Si no hay datos reales, usar datos sintéticos basados en las 7 bases
-    if (_heatData.length === 0) {
-      _heatData = _generarDatosSinteticos();
-    }
-
-    if (_heatActivo) _actualizarCapaHeatmap();
-  });
-}
-
-// ── Datos sintéticos (cuando no hay viajes aún) ───────────────
-function _generarDatosSinteticos() {
-  // Pesos por base según tráfico esperado en Nochixtlán
-  const puntosBase = [
-    // [lat, lng, intensidad_base, varianza]
-    [17.459468, -97.225268, 1.0,  0.0008], // B1 Centro — más alta demanda
-    [17.460197, -97.229843, 0.7,  0.0006], // B2 Turístico
-    [17.460377, -97.231048, 0.8,  0.0007], // B3 Terminal Sur — alta por buses
-    [17.458817, -97.222210, 0.5,  0.0005], // B4 Porfirio/Alcalá
-    [17.459680, -97.227145, 0.6,  0.0005], // B5 Porfirio/5Feb
-    [17.450427, -97.225592, 0.6,  0.0006], // B6 Hospital — constante
-    [17.453626, -97.230098, 0.4,  0.0004], // B7 Fresno
-  ];
-
-  const puntos = [];
-  puntosBase.forEach(([lat, lng, intens, var_]) => {
-    // Generar cluster de puntos alrededor de cada base
-    const n = Math.floor(intens * 20) + 5;
-    for (let i = 0; i < n; i++) {
-      puntos.push([
-        lat  + (Math.random() - 0.5) * var_ * 2,
-        lng  + (Math.random() - 0.5) * var_ * 2,
-        intens * (0.5 + Math.random() * 0.5)
-      ]);
-    }
-  });
-  return puntos;
-}
-
-// ── Toggle heatmap ────────────────────────────────────────────
-function toggleHeatmap() {
-  _heatActivo = !_heatActivo;
-  const btn    = document.getElementById('btnHeatmap');
-  const legend = document.getElementById('heatmap-legend');
-
-  if (_heatActivo) {
-    btn.classList.add('activo');
-    legend.classList.add('visible');
-    _actualizarCapaHeatmap();
-  } else {
-    btn.classList.remove('activo');
-    legend.classList.remove('visible');
-    if (_heatLayer && S.map) {
-      S.map.removeLayer(_heatLayer);
-      _heatLayer = null;
-    }
-  }
-}
-
-function _actualizarCapaHeatmap() {
-  if (!S.map) return;
-  const datos = _heatData.length > 0 ? _heatData : _generarDatosSinteticos();
-
-  if (_heatLayer) {
-    _heatLayer.setLatLngs(datos);
-  } else {
-    _heatLayer = L.heatLayer(datos, HEATMAP_CONFIG).addTo(S.map);
-  }
-}
-
-// ── Calcular rutas frecuentes ─────────────────────────────────
-function _calcularRutasFrecuentes() {
-  // Leer últimas 48h de solicitudes completadas
-  const hace48h = Date.now() - 48 * 60 * 60 * 1000;
-  rtdb.ref('/solicitudes')
-    .orderByChild('timestamp').startAt(hace48h)
-    .once('value', snap => {
-      const conteo = {};  // "lat1,lng1->lat2,lng2" : {viajes, lat1, lng1, lat2, lng2, bases}
-
-      snap.forEach(child => {
-        const s = child.val();
-        if (s.estado !== 'completado') return;
-        if (!s.origen_lat || !s.destino_lat) return;
-
-        // Redondear a 3 decimales para agrupar zonas cercanas
-        const oLat = Math.round(s.origen_lat  * 200) / 200;
-        const oLng = Math.round(s.origen_lng  * 200) / 200;
-        const dLat = Math.round(s.destino_lat * 200) / 200;
-        const dLng = Math.round(s.destino_lng * 200) / 200;
-        const key  = `${oLat},${oLng}->${dLat},${dLng}`;
-
-        if (!conteo[key]) {
-          conteo[key] = {
-            viajes: 0, oLat: s.origen_lat, oLng: s.origen_lng,
-            dLat: s.destino_lat, dLng: s.destino_lng,
-            baseOrigen: _basesMasCercana(s.origen_lat, s.origen_lng),
-            baseDestino: _basesMasCercana(s.destino_lat, s.destino_lng),
-          };
-        }
-        conteo[key].viajes += 1;
-      });
-
-      // Ordenar por viajes descendente
-      _rutasData = Object.values(conteo)
-        .sort((a, b) => b.viajes - a.viajes)
-        .slice(0, 8);
-
-      // Si no hay datos reales, usar rutas sintéticas
-      if (_rutasData.length === 0) {
-        _rutasData = _generarRutasSinteticas();
-      }
-
-      _renderRutasPanel();
-    });
-}
-
-// ── Rutas sintéticas para demo ────────────────────────────────
-function _generarRutasSinteticas() {
-  return [
-    { baseOrigen: 'B3 Terminal Sur', baseDestino: 'B1 Centro',   viajes: 47, oLat: 17.4604, oLng: -97.2310, dLat: 17.4595, dLng: -97.2253 },
-    { baseOrigen: 'B1 Centro',       baseDestino: 'B6 Hospital', viajes: 38, oLat: 17.4595, oLng: -97.2253, dLat: 17.4504, dLng: -97.2256 },
-    { baseOrigen: 'B1 Centro',       baseDestino: 'B3 Terminal', viajes: 35, oLat: 17.4595, oLng: -97.2253, dLat: 17.4604, dLng: -97.2310 },
-    { baseOrigen: 'B6 Hospital',     baseDestino: 'B1 Centro',   viajes: 29, oLat: 17.4504, oLng: -97.2256, dLat: 17.4595, dLng: -97.2253 },
-    { baseOrigen: 'B2 Turístico',    baseDestino: 'B1 Centro',   viajes: 24, oLat: 17.4602, oLng: -97.2298, dLat: 17.4595, dLng: -97.2253 },
-    { baseOrigen: 'B5 Porfirio',     baseDestino: 'B6 Hospital', viajes: 19, oLat: 17.4597, oLng: -97.2271, dLat: 17.4504, dLng: -97.2256 },
-    { baseOrigen: 'B4 Alcalá',       baseDestino: 'B3 Terminal', viajes: 15, oLat: 17.4588, oLng: -97.2222, dLat: 17.4604, dLng: -97.2310 },
-    { baseOrigen: 'B7 Fresno',       baseDestino: 'B1 Centro',   viajes:  9, oLat: 17.4536, oLng: -97.2301, dLat: 17.4595, dLng: -97.2253 },
-  ];
-}
-
-// ── Base más cercana a un punto ───────────────────────────────
-function _basesMasCercana(lat, lng) {
-  let minDist = Infinity, nombre = 'Zona';
-  const BASES_LOCAL = {
-    'B1 Centro': [17.459468, -97.225268], 'B2 Turístico': [17.460197, -97.229843],
-    'B3 Terminal': [17.460377, -97.231048], 'B4 Alcalá': [17.458817, -97.222210],
-    'B5 Porfirio': [17.459680, -97.227145], 'B6 Hospital': [17.450427, -97.225592],
-    'B7 Fresno': [17.453626, -97.230098],
-  };
-  Object.entries(BASES_LOCAL).forEach(([n, [bLat, bLng]]) => {
-    const d = Math.hypot(lat - bLat, lng - bLng);
-    if (d < minDist) { minDist = d; nombre = n; }
-  });
-  return nombre;
-}
-
-// ── Render panel de rutas ─────────────────────────────────────
-function _renderRutasPanel() {
-  const lista = document.getElementById('rutas-lista');
-  if (!lista) return;
-
-  if (_rutasData.length === 0) {
-    lista.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--text-dim);text-align:center">Sin datos suficientes</div>';
-    return;
-  }
-
-  const maxViajes = _rutasData[0].viajes;
-  lista.innerHTML = _rutasData.map((r, i) => {
-    const pct  = Math.round(r.viajes / maxViajes * 100);
-    return `
-      <div class="ruta-item" onclick="trazarRutaEnMapa(${i})">
-        <div class="ruta-rank">#${i + 1} — ${pct}% de rutas</div>
-        <div class="ruta-nombre">${r.baseOrigen} → ${r.baseDestino}</div>
-        <div class="ruta-stats">
-          <span><span class="ruta-stat-val">${r.viajes}</span> viajes</span>
-        </div>
-        <div style="margin-top:5px;height:2px;background:var(--border);border-radius:1px">
-          <div style="width:${pct}%;height:100%;background:var(--amber);border-radius:1px;transition:width 0.4s"></div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ── Toggle panel de rutas ─────────────────────────────────────
-function togglePanelRutas() {
-  _rutasActivas = !_rutasActivas;
-  const panel = document.getElementById('panel-rutas');
-  const btn   = document.getElementById('btnRutas');
-
-  if (_rutasActivas) {
-    panel.classList.add('visible');
-    btn.classList.add('activo');
-    _renderRutasPanel();
-  } else {
-    panel.classList.remove('visible');
-    btn.classList.remove('activo');
-    // Limpiar líneas del mapa
-    _rutaLines.forEach(l => { try { S.map.removeLayer(l); } catch(_){} });
-    _rutaLines = [];
-  }
-}
-
-// ── Trazar ruta en el mapa al hacer clic ─────────────────────
-function trazarRutaEnMapa(idx) {
-  const r = _rutasData[idx];
-  if (!r || !S.map) return;
-
-  // Limpiar líneas anteriores
-  _rutaLines.forEach(l => { try { S.map.removeLayer(l); } catch(_){} });
-  _rutaLines = [];
-
-  // Línea de la ruta
-  const linea = L.polyline(
-    [[r.oLat, r.oLng], [r.dLat, r.dLng]],
-    { color: '#f59e0b', weight: 4, opacity: 0.85, dashArray: '8,4' }
-  ).addTo(S.map);
-
-  // Marcador origen
-  const mOrigen = L.circleMarker([r.oLat, r.oLng], {
-    radius: 8, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1, weight: 2
-  }).addTo(S.map).bindPopup(`<b>Origen</b><br>${r.baseOrigen}<br><b>${r.viajes} viajes</b>`);
-
-  // Marcador destino
-  const mDestino = L.circleMarker([r.dLat, r.dLng], {
-    radius: 8, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2
-  }).addTo(S.map).bindPopup(`<b>Destino</b><br>${r.baseDestino}`);
-
-  _rutaLines = [linea, mOrigen, mDestino];
-
-  // Centrar mapa en la ruta
-  S.map.fitBounds([[r.oLat, r.oLng], [r.dLat, r.dLng]], { padding: [50, 50] });
-  mOrigen.openPopup();
-}
-
-</script>
-<script>
-// ══════════════════════════════════════════════════════════════
-// MÓDULO: HEATMAP & RUTAS FRECUENTES — App Base Central
-// ══════════════════════════════════════════════════════════════
-
-// ── Estado del módulo ─────────────────────────────────────────
-const HM = {
-  heatLayer:      null,
-  rutasLayer:     [],   // polylines de rutas dibujadas
-  heatActivo:     false,
-  panelActivo:    false,
-  tabActual:      'zonas',
-  listeners:      [],
-  datos: {
-    solicitudes:  [],   // historial de solicitudes con origen/destino
-    zonas:        {},   // { baseId: { solicitudes, viajes } }
-  }
-};
-
-// ── Coordenadas de zonas clave de Nochixtlán ─────────────────
-// Se usan para generar puntos del heatmap con peso real
-const ZONAS_EXTRA = [
-  { nombre: 'Mercado Municipal',   lat: 17.4596, lng: -97.2251, peso: 1.4 },
-  { nombre: 'Presidencia',         lat: 17.4592, lng: -97.2260, peso: 1.2 },
-  { nombre: 'Carretera 190',       lat: 17.4572, lng: -97.2198, peso: 1.1 },
-  { nombre: 'Col. San Juan',       lat: 17.4625, lng: -97.2285, peso: 0.9 },
-  { nombre: 'Barrio San Pedro',    lat: 17.4548, lng: -97.2312, peso: 0.8 },
-  { nombre: 'Zona Escolar',        lat: 17.4615, lng: -97.2230, peso: 1.3 },
-  { nombre: 'Clínica IMSS',        lat: 17.4508, lng: -97.2265, peso: 1.0 },
-];
-
-// ── Inicializar módulo (llamar después de initMap) ────────────
-function iniciarHeatmap() {
-  _escucharSolicitudes();
-}
-
-function _escucharSolicitudes() {
-  // Escuchar historial de viajes para calcular demanda real
-  const inicioSemana = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const ref = rtdb.ref('/solicitudes')
-    .orderByChild('timestamp').startAt(inicioSemana);
-
-  const fn = ref.on('value', snap => {
-    HM.datos.solicitudes = [];
-    snap.forEach(child => {
-      const v = child.val();
-      if (v && v.lat_origen && v.lng_origen) {
-        HM.datos.solicitudes.push({ id: child.key, ...v });
-      }
-    });
-    _calcularZonas();
-    if (HM.heatActivo) _renderHeatLayer();
-    if (HM.panelActivo) _renderPanel();
-  });
-  HM.listeners.push(() => ref.off('value', fn));
-}
-
-// ── Calcular demanda por zona ─────────────────────────────────
-function _calcularZonas() {
-  // Reset
-  Object.keys(BASES).forEach(id => {
-    HM.datos.zonas[id] = { solicitudes: 0, viajes: 0, ingresos: 0, nombre: BASES[id].nombre };
-  });
-
-  HM.datos.solicitudes.forEach(s => {
-    // Asociar solicitud a la base más cercana al origen
-    let baseMasCercana = null;
-    let distMin = Infinity;
-    Object.entries(BASES).forEach(([id, b]) => {
-      const d = _distKm(s.lat_origen, s.lng_origen, b.lat, b.lng);
-      if (d < distMin) { distMin = d; baseMasCercana = id; }
-    });
-    if (baseMasCercana && distMin < 0.8) { // dentro de 800m
-      HM.datos.zonas[baseMasCercana].solicitudes++;
-      if (s.estado === 'completado') {
-        HM.datos.zonas[baseMasCercana].viajes++;
-        HM.datos.zonas[baseMasCercana].ingresos += (s.costo || 35);
-      }
-    }
-  });
-}
-
-// ── Distancia en km (Haversine) ───────────────────────────────
+// Distancia entre dos puntos (Haversine simplificado)
 function _distKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 +
-            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
-            Math.sin(dLng/2)**2;
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ── Generar puntos del heatmap ────────────────────────────────
-function _generarPuntosHeat() {
-  const puntos = [];
-
-  // Puntos desde solicitudes reales
-  HM.datos.solicitudes.forEach(s => {
-    if (s.lat_origen && s.lng_origen) {
-      puntos.push([s.lat_origen, s.lng_origen, 0.8]);
-    }
-    if (s.lat_destino && s.lng_destino) {
-      puntos.push([s.lat_destino, s.lng_destino, 0.5]);
-    }
+// Encontrar conductor libre más cercano a una solicitud
+function _conductorMasCercano(solicitud) {
+  let mejor = null, minDist = Infinity;
+  Object.values(S.unidades || {}).forEach(u => {
+    if (u.estado !== 'libre' && u.estado !== 'disponible') return;
+    if (!u.lat || !u.lng) return;
+    const d = _distKm(solicitud.origen_lat, solicitud.origen_lng, u.lat, u.lng);
+    if (d < minDist) { minDist = d; mejor = { ...u, distKm: d }; }
   });
-
-  // Si no hay datos reales suficientes, usar datos representativos
-  // basados en las 7 bases y zonas clave de Nochixtlán
-  if (puntos.length < 10) {
-    Object.values(BASES).forEach(b => {
-      // Generar cluster de puntos alrededor de cada base
-      for (let i = 0; i < 8; i++) {
-        const jitter = () => (Math.random() - 0.5) * 0.003;
-        puntos.push([b.lat + jitter(), b.lng + jitter(), 0.6 + Math.random() * 0.4]);
-      }
-    });
-    ZONAS_EXTRA.forEach(z => {
-      for (let i = 0; i < 5; i++) {
-        const jitter = () => (Math.random() - 0.5) * 0.002;
-        puntos.push([z.lat + jitter(), z.lng + jitter(), z.peso * (0.5 + Math.random() * 0.5)]);
-      }
-    });
-  }
-
-  return puntos;
+  return mejor;
 }
 
-// ── Toggle heatmap ────────────────────────────────────────────
-function toggleHeatmap() {
-  HM.heatActivo = !HM.heatActivo;
-  const btn    = document.getElementById('btnHeatmap');
-  const legend = document.getElementById('heatmap-legend');
+function iniciarCola() {
+  // Escuchar solicitudes en estado "pendiente"
+  const refCola = rtdb.ref('/solicitudes')
+    .orderByChild('estado').equalTo('pendiente');
+  const fnCola = refCola.on('value', snap => {
+    _colaSolicitudes = {};
+    snap.forEach(c => { _colaSolicitudes[c.key] = { id: c.key, ...c.val() }; });
+    _renderCola();
+    _actualizarBadgeCola();
+  });
+  _colaListeners.push(() => refCola.off('value', fnCola));
 
-  if (HM.heatActivo) {
-    _renderHeatLayer();
-    btn.classList.add('activo');
-    if (legend) legend.classList.add('visible');
-  } else {
-    if (HM.heatLayer) { S.map.removeLayer(HM.heatLayer); HM.heatLayer = null; }
-    _limpiarRutasDibujadas();
-    btn.classList.remove('activo');
-    if (legend) legend.classList.remove('visible');
-  }
+  // Contar asignadas hoy
+  const inicioHoy = new Date(); inicioHoy.setHours(0,0,0,0);
+  const refAsig = rtdb.ref('/solicitudes')
+    .orderByChild('timestamp').startAt(inicioHoy.getTime());
+  const fnAsig = refAsig.on('value', snap => {
+    let count = 0;
+    snap.forEach(c => { if (c.val().estado === 'completado' || c.val().estado === 'aceptado') count++; });
+    _colaAsignadasHoy = count;
+    _renderCola();
+  });
+  _colaListeners.push(() => refAsig.off('value', fnAsig));
+
+  // Iniciar detector de fantasmas
+  _iniciarDetectorFantasmas();
 }
 
-function _renderHeatLayer() {
-  if (HM.heatLayer) S.map.removeLayer(HM.heatLayer);
-  const puntos = _generarPuntosHeat();
-  HM.heatLayer = L.heatLayer(puntos, {
-    radius:    28,
-    blur:      20,
-    maxZoom:   17,
-    max:       1.0,
-    gradient:  { 0.0: '#0000ff', 0.3: '#00ffff', 0.5: '#00ff00', 0.7: '#ffff00', 1.0: '#ff0000' }
-  }).addTo(S.map);
+function destruirCola() {
+  _colaListeners.forEach(fn => fn());
+  _colaListeners = [];
+  if (_fantasmaInterv) { clearInterval(_fantasmaInterv); _fantasmaInterv = null; }
 }
 
-// ── Toggle panel de rutas ─────────────────────────────────────
-function togglePanelRutas() {
-  HM.panelActivo = !HM.panelActivo;
-  const panel = document.getElementById('panel-rutas');
-  const btn   = document.getElementById('btnRutas');
-  if (!panel) return;
+// ── Render cola ───────────────────────────────────────────────
+function _renderCola() {
+  const lista = document.getElementById('colaLista');
+  if (!lista) return;
 
-  if (HM.panelActivo) {
-    panel.classList.add('visible');
-    btn.classList.add('activo');
-    _renderPanel();
-    // Activar heatmap también si no está activo
-    if (!HM.heatActivo) toggleHeatmap();
-  } else {
-    panel.classList.remove('visible');
-    btn.classList.remove('activo');
-    _limpiarRutasDibujadas();
-  }
-}
+  const solis = Object.values(_colaSolicitudes)
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-// ── Switch de tabs en el panel ────────────────────────────────
-function switchRutasTab(tab) {
-  HM.tabActual = tab;
-  document.querySelectorAll('.rutas-tab').forEach(t => t.classList.remove('activo'));
-  const tabEl = document.getElementById('tab-' + tab);
-  if (tabEl) tabEl.classList.add('activo');
-  _renderPanel();
-}
+  // Stats
+  const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  el('colaStatEspera', solis.length);
+  el('colaStatAsignadas', _colaAsignadasHoy);
 
-// ── Render del panel ──────────────────────────────────────────
-function _renderPanel() {
-  const body = document.getElementById('rutas-lista');
-  if (!body) return;
-
-  if (HM.tabActual === 'zonas') {
-    _renderZonas(body);
-  } else {
-    _renderRutas(body);
-  }
-}
-
-function _renderZonas(container) {
-  const zonas = Object.entries(HM.datos.zonas)
-    .map(([id, z]) => ({ id, ...z }))
-    .sort((a, b) => b.solicitudes - a.solicitudes);
-
-  const maxSol = Math.max(...zonas.map(z => z.solicitudes), 1);
-
-  if (zonas.every(z => z.solicitudes === 0)) {
-    // Sin datos reales — mostrar datos representativos de las bases
-    container.innerHTML = _renderZonasDemoHTML();
+  if (solis.length === 0) {
+    lista.innerHTML = '<div class="cola-empty">Sin solicitudes pendientes ✅</div>';
+    el('colaStatTiempo', '—');
     return;
   }
 
-  container.innerHTML = zonas.map((z, i) => {
-    const pct   = Math.round((z.solicitudes / maxSol) * 100);
-    const nivel = pct > 70 ? 'alta' : pct > 35 ? 'media' : 'normal';
-    const txt   = pct > 70 ? 'ALTA' : pct > 35 ? 'MEDIA' : 'NORMAL';
-    const color = pct > 70 ? '#ef4444' : pct > 35 ? '#f59e0b' : '#10b981';
-    return `
-      <div class="zona-card" onclick="_enfocarZona('${z.id}')">
-        <div class="zona-header">
-          <span class="zona-nombre">${z.nombre}</span>
-          <span class="zona-badge ${nivel}">${txt}</span>
-        </div>
-        <div class="zona-solicitudes">${z.solicitudes} solicitudes · ${z.viajes} completados</div>
-        <div class="zona-barra">
-          <div class="zona-barra-fill" style="width:${pct}%;background:${color}"></div>
-        </div>
-      </div>`;
+  // Calcular esperas
+  const ahora = Date.now();
+  _tiemposEspera = solis.map(s => ahora - (s.timestamp || ahora));
+  const promEspera = _tiemposEspera.reduce((a,b) => a+b, 0) / _tiemposEspera.length;
+  const promMin = Math.floor(promEspera / 60000);
+  el('colaStatTiempo', promMin + ' min');
+
+  lista.innerHTML = solis.map((s, i) => {
+    const espMin  = Math.floor((ahora - (s.timestamp||ahora)) / 60000);
+    const conductor = _conductorMasCercano(s);
+    const distTxt = conductor ? conductor.distKm.toFixed(1) + ' km' : 'Sin conductor';
+    const alerta  = espMin > 10 ? 'border-color:var(--red)' : '';
+
+    return `<div class="cola-item" style="${alerta}">
+      <div class="cola-pos">#${i+1}</div>
+      <div class="cola-info">
+        <div class="cola-usuario">📍 ${s.origen || 'Solicitud ' + (i+1)}</div>
+        <div class="cola-espera">⏱ ${espMin} min en espera</div>
+        <div class="cola-dist">🚕 Conductor más cercano: ${distTxt}</div>
+      </div>
+      ${conductor
+        ? `<div class="cola-conductor">U-${conductor.id || '—'}<br>${distTxt}</div>`
+        : '<div class="cola-conductor" style="color:var(--red)">Sin<br>libre</div>'
+      }
+    </div>`;
   }).join('');
 }
 
-function _renderZonasDemoHTML() {
-  // Datos representativos cuando no hay historial suficiente
-  const demo = [
-    { nombre: 'B1 Centro',         nivel: 'alta',   pct: 95, sol: '—', color: '#ef4444' },
-    { nombre: 'B5 P.Díaz/5Feb',    nivel: 'alta',   pct: 82, sol: '—', color: '#ef4444' },
-    { nombre: 'B2 Turístico',      nivel: 'media',  pct: 61, sol: '—', color: '#f59e0b' },
-    { nombre: 'B6 Hospital',       nivel: 'media',  pct: 54, sol: '—', color: '#f59e0b' },
-    { nombre: 'B4 P.Díaz/Alcalá',  nivel: 'media',  pct: 48, sol: '—', color: '#f59e0b' },
-    { nombre: 'B3 Terminal Sur',   nivel: 'normal', pct: 35, sol: '—', color: '#10b981' },
-    { nombre: 'B7 Fresno',         nivel: 'normal', pct: 22, sol: '—', color: '#10b981' },
-  ];
-  return '<div style="font-size:10px;color:var(--text-dim);text-align:center;padding:6px 0 10px">Datos históricos en acumulación</div>' +
-    demo.map(z => `
-      <div class="zona-card">
-        <div class="zona-header">
-          <span class="zona-nombre">${z.nombre}</span>
-          <span class="zona-badge ${z.nivel}">${z.nivel.toUpperCase()}</span>
-        </div>
-        <div class="zona-solicitudes">Demanda relativa estimada</div>
-        <div class="zona-barra">
-          <div class="zona-barra-fill" style="width:${z.pct}%;background:${z.color}"></div>
-        </div>
-      </div>`).join('');
+function _actualizarBadgeCola() {
+  const n = Object.keys(_colaSolicitudes).length;
+  const badge = document.getElementById('colaBadge');
+  if (badge) {
+    badge.textContent = n;
+    badge.classList.toggle('visible', n > 0);
+  }
 }
 
-function _renderRutas(container) {
-  // Calcular rutas desde historial real
-  const rutasMap = {};
-  HM.datos.solicitudes.filter(s => s.estado === 'completado').forEach(s => {
-    const origen  = _baseNombre(s.lat_origen,  s.lng_origen);
-    const destino = _baseNombre(s.lat_destino, s.lng_destino);
-    if (!origen || !destino || origen === destino) return;
-    const key = `${origen}→${destino}`;
-    if (!rutasMap[key]) rutasMap[key] = { origen, destino, viajes: 0, ingresos: 0 };
-    rutasMap[key].viajes++;
-    rutasMap[key].ingresos += (s.costo || 35);
+// ── Toggle vistas ─────────────────────────────────────────────
+function _ocultarTodosLosPaneles() {
+  ['leftPanel','calView','colaView','fantasmaView'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'leftPanel') el.style.display = 'none';
+    else { el.style.display = 'none'; el.classList?.remove('activo'); }
+  });
+  ['calTabBtn','colaTabBtn','fantasmaTabBtn'].forEach(id => {
+    document.getElementById(id)?.classList.remove('activo');
+  });
+  _colaActivo = false; _fantasmaActivo = false;
+}
+
+function toggleColaView() {
+  const yaActivo = _colaActivo;
+  _ocultarTodosLosPaneles();
+  if (!yaActivo) {
+    _colaActivo = true;
+    const v = document.getElementById('colaView');
+    if (v) { v.style.display = 'flex'; v.classList.add('activo'); }
+    document.getElementById('colaTabBtn')?.classList.add('activo');
+    _renderCola();
+  } else {
+    // Volver al leftPanel
+    const lp = document.getElementById('leftPanel');
+    if (lp) lp.style.display = '';
+  }
+}
+
+function toggleFantasmaView() {
+  const yaActivo = _fantasmaActivo;
+  _ocultarTodosLosPaneles();
+  if (!yaActivo) {
+    _fantasmaActivo = true;
+    const v = document.getElementById('fantasmaView');
+    if (v) { v.style.display = 'flex'; }
+    document.getElementById('fantasmaTabBtn')?.classList.add('activo');
+    _renderFantasmas();
+  } else {
+    const lp = document.getElementById('leftPanel');
+    if (lp) lp.style.display = '';
+  }
+}
+
+// También parchamos toggleCalView para usar el mismo sistema
+const _toggleCalViewOriginal = typeof toggleCalView === 'function' ? toggleCalView : null;
+function toggleCalView() {
+  const calView = document.getElementById('calView');
+  const yaActivo = calView?.classList.contains('activo');
+  _ocultarTodosLosPaneles();
+  if (!yaActivo) {
+    calView?.classList.add('activo');
+    if (calView) calView.style.display = 'flex';
+    document.getElementById('calTabBtn')?.classList.add('activo');
+  } else {
+    const lp = document.getElementById('leftPanel');
+    if (lp) lp.style.display = '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO 2: DETECTOR DE UNIDADES FANTASMA
+// ══════════════════════════════════════════════════════════════
+const FANTASMA_UMBRAL_MS = 30 * 60 * 1000; // 30 minutos
+
+let _fantasmasDetectados = {};  // unitId → {ultimaVez, minutos}
+
+function _iniciarDetectorFantasmas() {
+  // Revisar cada 2 minutos
+  _fantasmaInterv = setInterval(_detectarFantasmas, 2 * 60 * 1000);
+  _detectarFantasmas(); // Ejecutar inmediatamente
+}
+
+function _detectarFantasmas() {
+  const ahora = Date.now();
+  _fantasmasDetectados = {};
+
+  Object.entries(S.unidades || {}).forEach(([id, u]) => {
+    if (!u.ultimaActualizacion) return;
+    const diff = ahora - u.ultimaActualizacion;
+    if (diff >= FANTASMA_UMBRAL_MS) {
+      _fantasmasDetectados[id] = {
+        id, unidadNumero: u.id || id,
+        ultimaVez: u.ultimaActualizacion,
+        minutosInactivo: Math.floor(diff / 60000),
+      };
+    }
   });
 
-  const rutas = Object.values(rutasMap).sort((a, b) => b.viajes - a.viajes).slice(0, 8);
+  const n = Object.keys(_fantasmasDetectados).length;
+  const badge = document.getElementById('fantasmaBadge');
+  if (badge) {
+    badge.textContent = n;
+    badge.classList.toggle('visible', n > 0);
+  }
 
-  if (rutas.length === 0) {
-    container.innerHTML = _renderRutasDemoHTML();
+  if (_fantasmaActivo) _renderFantasmas();
+}
+
+function _renderFantasmas() {
+  const lista = document.getElementById('fantasmaLista');
+  if (!lista) return;
+
+  const items = Object.values(_fantasmasDetectados);
+  if (items.length === 0) {
+    lista.innerHTML = '<div class="cola-empty" style="color:var(--green)">✅ Todas las unidades reportando correctamente</div>';
     return;
   }
 
-  container.innerHTML = rutas.map((r, i) => `
-    <div class="ruta-card ${i === 0 ? 'destacada' : ''}"
-         onclick="_dibujarRuta('${r.origen}','${r.destino}')">
-      <div class="ruta-rank">#${i+1} ruta más frecuente</div>
-      <div class="ruta-origen">📍 ${r.origen}</div>
-      <div class="ruta-flecha">↓</div>
-      <div class="ruta-destino">🏁 ${r.destino}</div>
-      <div class="ruta-stats">
-        <div class="ruta-stat">
-          <span class="ruta-stat-n amber">${r.viajes}</span>
-          <span class="ruta-stat-l">Viajes</span>
+  lista.innerHTML = items
+    .sort((a,b) => b.minutosInactivo - a.minutosInactivo)
+    .map(f => {
+      const fecha = new Date(f.ultimaVez).toLocaleTimeString('es-MX',
+        { hour: '2-digit', minute: '2-digit' });
+      return `<div class="fantasma-card">
+        <div class="fantasma-header">
+          <span class="fantasma-unidad">👻 Unidad ${f.unidadNumero}</span>
+          <span class="fantasma-tiempo">${f.minutosInactivo} min sin señal</span>
         </div>
-        <div class="ruta-stat">
-          <span class="ruta-stat-n verde">$${r.ingresos}</span>
-          <span class="ruta-stat-l">Ingreso</span>
-        </div>
-        <div class="ruta-stat">
-          <span class="ruta-stat-n azul">$${Math.round(r.ingresos/r.viajes)}</span>
-          <span class="ruta-stat-l">Promedio</span>
-        </div>
-      </div>
-    </div>`).join('');
+        <div class="fantasma-ultima">Último reporte: ${fecha}</div>
+        <button class="btn-fantasma-ok" onclick="_ignorarFantasma('${f.id}')">
+          📞 Contactado — Ignorar por ahora
+        </button>
+      </div>`;
+    }).join('');
 }
 
-function _renderRutasDemoHTML() {
-  const demo = [
-    { o: 'Centro',       d: 'Hospital',      viajes: '—', ing: '—', avg: '~$35' },
-    { o: 'Terminal Sur', d: 'Centro',         viajes: '—', ing: '—', avg: '~$30' },
-    { o: 'Fresno',       d: 'P.Díaz/Alcalá', viajes: '—', ing: '—', avg: '~$25' },
-    { o: 'Turístico',    d: 'Hospital',       viajes: '—', ing: '—', avg: '~$40' },
-  ];
-  return '<div style="font-size:10px;color:var(--text-dim);text-align:center;padding:6px 0 10px">Rutas en acumulación de datos</div>' +
-    demo.map((r, i) => `
-      <div class="ruta-card ${i===0?'destacada':''}">
-        <div class="ruta-rank">#${i+1} ruta estimada</div>
-        <div class="ruta-origen">📍 ${r.o}</div>
-        <div class="ruta-flecha">↓</div>
-        <div class="ruta-destino">🏁 ${r.d}</div>
-        <div class="ruta-stats">
-          <div class="ruta-stat"><span class="ruta-stat-n amber">${r.viajes}</span><span class="ruta-stat-l">Viajes</span></div>
-          <div class="ruta-stat"><span class="ruta-stat-n verde">${r.ing}</span><span class="ruta-stat-l">Ingreso</span></div>
-          <div class="ruta-stat"><span class="ruta-stat-n azul">${r.avg}</span><span class="ruta-stat-l">Promedio</span></div>
-        </div>
-      </div>`).join('');
-}
-
-// ── Helpers ───────────────────────────────────────────────────
-function _baseNombre(lat, lng) {
-  if (!lat || !lng) return null;
-  let mejor = null, distMin = Infinity;
-  Object.entries(BASES).forEach(([, b]) => {
-    const d = _distKm(lat, lng, b.lat, b.lng);
-    if (d < distMin) { distMin = d; mejor = b.nombre; }
-  });
-  return distMin < 1.5 ? mejor : 'Otro punto';
-}
-
-function _enfocarZona(baseId) {
-  const b = BASES[baseId];
-  if (b && S.map) S.map.setView([b.lat, b.lng], 16, { animate: true });
-}
-
-function _dibujarRuta(origen, destino) {
-  _limpiarRutasDibujadas();
-  // Buscar coordenadas de origen y destino
-  const bOrigen  = Object.values(BASES).find(b => b.nombre === origen);
-  const bDestino = Object.values(BASES).find(b => b.nombre === destino);
-  if (!bOrigen || !bDestino || !S.map) return;
-
-  const linea = L.polyline(
-    [[bOrigen.lat, bOrigen.lng], [bDestino.lat, bDestino.lng]],
-    { color: '#f59e0b', weight: 4, opacity: 0.85, dashArray: '8 6' }
-  ).addTo(S.map);
-
-  // Marcadores de inicio y fin
-  const mkO = L.circleMarker([bOrigen.lat,  bOrigen.lng],  { radius: 7, color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }).addTo(S.map);
-  const mkD = L.circleMarker([bDestino.lat, bDestino.lng], { radius: 7, color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }).addTo(S.map);
-
-  HM.rutasLayer.push(linea, mkO, mkD);
-  S.map.fitBounds([[bOrigen.lat, bOrigen.lng], [bDestino.lat, bDestino.lng]], { padding: [60, 60] });
-}
-
-function _limpiarRutasDibujadas() {
-  HM.rutasLayer.forEach(l => { try { S.map.removeLayer(l); } catch(_) {} });
-  HM.rutasLayer = [];
-}
-
-function destruirHeatmap() {
-  HM.listeners.forEach(fn => fn());
-  HM.listeners = [];
-  if (HM.heatLayer) { try { S.map.removeLayer(HM.heatLayer); } catch(_) {} HM.heatLayer = null; }
-  _limpiarRutasDibujadas();
+function _ignorarFantasma(unitId) {
+  delete _fantasmasDetectados[unitId];
+  _renderFantasmas();
+  const n = Object.keys(_fantasmasDetectados).length;
+  const badge = document.getElementById('fantasmaBadge');
+  if (badge) { badge.textContent = n; badge.classList.toggle('visible', n > 0); }
 }
 
 </script>
