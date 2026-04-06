@@ -585,81 +585,6 @@
     .cal-hist-item.media { border-left-color: var(--amber); }
     .cal-hist-item.baja  { border-left-color: var(--red); }
 
-  
-    /* ═══════════════════════════════════════════
-       COLA DE ESPERA + DETECTOR FANTASMA
-    ═══════════════════════════════════════════ */
-
-    /* Tab cola */
-    #colaTabBtn { position: relative; }
-    #colaBadge {
-      background: #3b82f6; color: #fff;
-      font-size: 9px; font-weight: 700;
-      border-radius: 8px; padding: 1px 5px;
-      display: none; margin-left: 3px;
-    }
-    #colaBadge.visible { display: inline; }
-
-    /* Panel cola de espera */
-    #colaView {
-      display: none; flex-direction: column;
-      height: 100%; overflow-y: auto;
-      background: var(--bg-panel);
-    }
-    #colaView.activo { display: flex; }
-
-    .cola-item {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 10px 12px;
-      margin-bottom: 6px; display: flex;
-      align-items: center; gap: 10px;
-      transition: border-color 0.2s;
-    }
-    .cola-item.asignando { border-color: var(--amber); }
-    .cola-pos {
-      font-family: var(--font-mono); font-size: 18px;
-      font-weight: 700; color: var(--amber);
-      min-width: 28px; text-align: center;
-    }
-    .cola-info { flex: 1; }
-    .cola-usuario { font-size: 12px; font-weight: 600; color: var(--text); }
-    .cola-espera  { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-    .cola-dist    { font-size: 10px; color: var(--green); font-weight: 700; }
-    .cola-conductor {
-      font-family: var(--font-mono); font-size: 11px;
-      color: var(--blue); text-align: right;
-    }
-    .cola-empty {
-      text-align: center; padding: 24px 16px;
-      color: var(--text-dim); font-size: 12px;
-    }
-
-    /* Fantasmas */
-    .fantasma-card {
-      background: rgba(239,68,68,0.06);
-      border: 1px solid var(--red); border-radius: var(--radius);
-      padding: 10px 12px; margin-bottom: 6px;
-      animation: pulseCal 2s infinite;
-    }
-    .fantasma-header {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-bottom: 4px;
-    }
-    .fantasma-unidad {
-      font-family: var(--font-mono); font-size: 13px;
-      font-weight: 700; color: #fef2f2;
-    }
-    .fantasma-tiempo { font-size: 11px; color: var(--red); font-weight: 700; }
-    .fantasma-ultima { font-size: 10px; color: #7f1d1d; }
-    .btn-fantasma-ok {
-      width: 100%; margin-top: 8px; padding: 6px;
-      background: var(--red-dim); border: 1px solid var(--red);
-      border-radius: var(--radius); color: #fca5a5;
-      font-size: 11px; font-weight: 700; font-family: var(--font-ui);
-      cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
-    }
-    .btn-fantasma-ok:hover { background: rgba(239,68,68,0.25); }
-
   </style>
 </head>
 <body>
@@ -736,12 +661,6 @@
     <button class="cal-tab-btn" id="calTabBtn" onclick="toggleCalView()">
       ⭐ CALIF <span class="cal-badge" id="calBadge">0</span>
     </button>
-    <button class="cal-tab-btn" id="colaTabBtn" onclick="toggleColaView()">
-      🔢 COLA <span class="cal-badge" id="colaBadge" style="background:#3b82f6">0</span>
-    </button>
-    <button class="cal-tab-btn" id="fantasmaTabBtn" onclick="toggleFantasmaView()">
-      👻 FANTASMAS <span class="cal-badge" id="fantasmaBadge">0</span>
-    </button>
     <button class="hbtn hbtn-fds" id="fdsBtn" onclick="toggleFDS()">
       ⚠ FDS
     </button>
@@ -776,6 +695,10 @@
             <div class="stat-val" id="stSOS">0</div>
             <div class="stat-lbl">Alertas SOS</div>
           </div>
+          <div class="stat-card sc-offline" id="offlineStat" onclick="toggleOfflinePanel()" style="cursor:pointer;border-color:rgba(100,116,139,0.4);">
+            <div class="stat-val" id="stOffline">0</div>
+            <div class="stat-lbl">Sin señal</div>
+          </div>
         </div>
       </div>
 
@@ -792,6 +715,19 @@
       </div>
       <div id="unitsList">
         <div class="u-empty">Sin unidades conectadas</div>
+      </div>
+
+      <!-- ── PANEL CONDUCTORES SIN SEÑAL ── -->
+      <div id="offlinePanel" style="display:none;margin-top:8px;">
+        <div class="ps" style="background:rgba(75,85,99,0.15);border:1px solid rgba(75,85,99,0.3);border-radius:12px;padding:10px;">
+          <div class="ps-title" style="color:var(--gray);display:flex;justify-content:space-between;align-items:center;">
+            📵 Sin señal GPS
+            <button onclick="toggleOfflinePanel()" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;">✕</button>
+          </div>
+          <div id="offlineList" style="max-height:200px;overflow-y:auto;">
+            <div style="font-size:11px;color:var(--text-dim);padding:6px 0;">Sin datos aún</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -820,50 +756,6 @@
         <div class="ps-title">🏆 Rendimiento conductores</div>
         <div id="calRankingContainer">
           <div style="font-size:11px;color:var(--text-dim);text-align:center;padding:10px">Sin datos aún</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ PANEL COLA DE ESPERA ══ -->
-    <div id="colaView">
-      <div class="ps-cal">
-        <div class="ps-title">📋 Solicitudes en espera</div>
-        <div class="cal-stats-row">
-          <div class="cal-stat">
-            <span class="cal-stat-n azul" id="colaStatEspera">0</span>
-            <span class="cal-stat-l">En espera</span>
-          </div>
-          <div class="cal-stat">
-            <span class="cal-stat-n verde" id="colaStatAsignadas">0</span>
-            <span class="cal-stat-l">Asignadas hoy</span>
-          </div>
-          <div class="cal-stat">
-            <span class="cal-stat-n" id="colaStatTiempo" style="color:var(--amber)">—</span>
-            <span class="cal-stat-l">Espera prom.</span>
-          </div>
-        </div>
-      </div>
-      <div class="ps-cal" style="flex:1;overflow-y:auto">
-        <div class="ps-title">Fila actual</div>
-        <div id="colaLista">
-          <div class="cola-empty">Sin solicitudes pendientes ✅</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ PANEL FANTASMAS ══ -->
-    <div id="fantasmaView" style="display:none;flex-direction:column;height:100%;overflow-y:auto;background:var(--bg-panel)">
-      <div class="ps-cal">
-        <div class="ps-title">👻 Unidades sin señal +30 min</div>
-        <p style="font-size:11px;color:var(--text-dim);margin:0">
-          Unidades en turno que dejaron de reportar su GPS
-        </p>
-      </div>
-      <div class="ps-cal" style="flex:1;overflow-y:auto">
-        <div id="fantasmaLista">
-          <div class="cola-empty" style="color:var(--green)">
-            ✅ Todas las unidades reportando correctamente
-          </div>
         </div>
       </div>
     </div>
@@ -1042,8 +934,8 @@ let auth, rtdb, db;
 async function verifyAccess(user) {
   S.role = 'operadora';
   showApp();
+  // Iniciar sistema de calificaciones en tiempo real
   if (typeof iniciarSistemaCalificaciones === 'function') iniciarSistemaCalificaciones();
-  if (typeof iniciarCola === 'function') iniciarCola();
 }
 
 auth && auth.onAuthStateChanged(async (user) => {
@@ -1425,6 +1317,14 @@ function renderPanel() {
   const sosStat = document.getElementById('sosStat');
   if (sosStat) sosStat.style.borderColor = sosCount > 0 ? 'var(--red)' : 'var(--border)';
 
+  // Offline count badge
+  setText('stOffline', sinSenal);
+  const offStat = document.getElementById('offlineStat');
+  if (offStat) offStat.style.borderColor = sinSenal > 0 ? 'rgba(100,116,139,0.8)' : 'rgba(100,116,139,0.2)';
+
+  // Actualizar lista offline
+  renderOfflineList(now);
+
   // Bases
   renderBases(bCounts);
 
@@ -1575,10 +1475,6 @@ function showLogin() {
 function tearDown() {
   // Limpiar sistema de calificaciones
   if (typeof destruirSistemaCalificaciones === 'function') destruirSistemaCalificaciones();
-  // Limpiar cola de espera
-  if (typeof destruirCola === 'function') destruirCola();
-  // Limpiar heatmap
-  if (typeof destruirHeatmap === 'function') destruirHeatmap();
   // Detach TODOS los listeners de cada ref registrada
   // ref.off() sin argumentos desconecta absolutamente todos los callbacks
   const refsVistas = new Set();
@@ -1937,267 +1833,36 @@ function cerrarHistorialCal() {
   if (modal) modal.style.display = 'none';
 }
 
-</script>
-<script>
+// ── Panel Conductores Sin Señal ──
+let _offlinePanelAbierto = false;
 
-// ══════════════════════════════════════════════════════════════
-// MÓDULO 1: COLA DE ESPERA INTELIGENTE
-// ══════════════════════════════════════════════════════════════
-const COLA_TIEMPO_MAX_ESPERA = 15 * 60 * 1000; // 15 min antes de alertar
-let _colaListeners   = [];
-let _colaActivo      = false;
-let _fantasmaActivo  = false;
-let _colaSolicitudes = {};   // solicitudesId → datos
-let _colaAsignadasHoy = 0;
-let _fantasmaInterv  = null;
-let _tiemposEspera   = [];
-
-// Distancia entre dos puntos (Haversine simplificado)
-function _distKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function toggleOfflinePanel() {
+  _offlinePanelAbierto = !_offlinePanelAbierto;
+  const panel = document.getElementById('offlinePanel');
+  if (panel) panel.style.display = _offlinePanelAbierto ? 'block' : 'none';
 }
 
-// Encontrar conductor libre más cercano a una solicitud
-function _conductorMasCercano(solicitud) {
-  let mejor = null, minDist = Infinity;
-  Object.values(S.unidades || {}).forEach(u => {
-    if (u.estado !== 'libre' && u.estado !== 'disponible') return;
-    if (!u.lat || !u.lng) return;
-    const d = _distKm(solicitud.origen_lat, solicitud.origen_lng, u.lat, u.lng);
-    if (d < minDist) { minDist = d; mejor = { ...u, distKm: d }; }
-  });
-  return mejor;
-}
-
-function iniciarCola() {
-  // Escuchar solicitudes en estado "pendiente"
-  const refCola = rtdb.ref('/solicitudes')
-    .orderByChild('estado').equalTo('pendiente');
-  const fnCola = refCola.on('value', snap => {
-    _colaSolicitudes = {};
-    snap.forEach(c => { _colaSolicitudes[c.key] = { id: c.key, ...c.val() }; });
-    _renderCola();
-    _actualizarBadgeCola();
-  });
-  _colaListeners.push(() => refCola.off('value', fnCola));
-
-  // Contar asignadas hoy
-  const inicioHoy = new Date(); inicioHoy.setHours(0,0,0,0);
-  const refAsig = rtdb.ref('/solicitudes')
-    .orderByChild('timestamp').startAt(inicioHoy.getTime());
-  const fnAsig = refAsig.on('value', snap => {
-    let count = 0;
-    snap.forEach(c => { if (c.val().estado === 'completado' || c.val().estado === 'aceptado') count++; });
-    _colaAsignadasHoy = count;
-    _renderCola();
-  });
-  _colaListeners.push(() => refAsig.off('value', fnAsig));
-
-  // Iniciar detector de fantasmas
-  _iniciarDetectorFantasmas();
-}
-
-function destruirCola() {
-  _colaListeners.forEach(fn => fn());
-  _colaListeners = [];
-  if (_fantasmaInterv) { clearInterval(_fantasmaInterv); _fantasmaInterv = null; }
-}
-
-// ── Render cola ───────────────────────────────────────────────
-function _renderCola() {
-  const lista = document.getElementById('colaLista');
+function renderOfflineList(now) {
+  const lista = document.getElementById('offlineList');
   if (!lista) return;
-
-  const solis = Object.values(_colaSolicitudes)
-    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-  // Stats
-  const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
-  el('colaStatEspera', solis.length);
-  el('colaStatAsignadas', _colaAsignadasHoy);
-
-  if (solis.length === 0) {
-    lista.innerHTML = '<div class="cola-empty">Sin solicitudes pendientes ✅</div>';
-    el('colaStatTiempo', '—');
-    return;
-  }
-
-  // Calcular esperas
-  const ahora = Date.now();
-  _tiemposEspera = solis.map(s => ahora - (s.timestamp || ahora));
-  const promEspera = _tiemposEspera.reduce((a,b) => a+b, 0) / _tiemposEspera.length;
-  const promMin = Math.floor(promEspera / 60000);
-  el('colaStatTiempo', promMin + ' min');
-
-  lista.innerHTML = solis.map((s, i) => {
-    const espMin  = Math.floor((ahora - (s.timestamp||ahora)) / 60000);
-    const conductor = _conductorMasCercano(s);
-    const distTxt = conductor ? conductor.distKm.toFixed(1) + ' km' : 'Sin conductor';
-    const alerta  = espMin > 10 ? 'border-color:var(--red)' : '';
-
-    return `<div class="cola-item" style="${alerta}">
-      <div class="cola-pos">#${i+1}</div>
-      <div class="cola-info">
-        <div class="cola-usuario">📍 ${s.origen || 'Solicitud ' + (i+1)}</div>
-        <div class="cola-espera">⏱ ${espMin} min en espera</div>
-        <div class="cola-dist">🚕 Conductor más cercano: ${distTxt}</div>
-      </div>
-      ${conductor
-        ? `<div class="cola-conductor">U-${conductor.id || '—'}<br>${distTxt}</div>`
-        : '<div class="cola-conductor" style="color:var(--red)">Sin<br>libre</div>'
-      }
-    </div>`;
-  }).join('');
-}
-
-function _actualizarBadgeCola() {
-  const n = Object.keys(_colaSolicitudes).length;
-  const badge = document.getElementById('colaBadge');
-  if (badge) {
-    badge.textContent = n;
-    badge.classList.toggle('visible', n > 0);
-  }
-}
-
-// ── Toggle vistas ─────────────────────────────────────────────
-function _ocultarTodosLosPaneles() {
-  ['leftPanel','calView','colaView','fantasmaView'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === 'leftPanel') el.style.display = 'none';
-    else { el.style.display = 'none'; el.classList?.remove('activo'); }
-  });
-  ['calTabBtn','colaTabBtn','fantasmaTabBtn'].forEach(id => {
-    document.getElementById(id)?.classList.remove('activo');
-  });
-  _colaActivo = false; _fantasmaActivo = false;
-}
-
-function toggleColaView() {
-  const yaActivo = _colaActivo;
-  _ocultarTodosLosPaneles();
-  if (!yaActivo) {
-    _colaActivo = true;
-    const v = document.getElementById('colaView');
-    if (v) { v.style.display = 'flex'; v.classList.add('activo'); }
-    document.getElementById('colaTabBtn')?.classList.add('activo');
-    _renderCola();
-  } else {
-    // Volver al leftPanel
-    const lp = document.getElementById('leftPanel');
-    if (lp) lp.style.display = '';
-  }
-}
-
-function toggleFantasmaView() {
-  const yaActivo = _fantasmaActivo;
-  _ocultarTodosLosPaneles();
-  if (!yaActivo) {
-    _fantasmaActivo = true;
-    const v = document.getElementById('fantasmaView');
-    if (v) { v.style.display = 'flex'; }
-    document.getElementById('fantasmaTabBtn')?.classList.add('activo');
-    _renderFantasmas();
-  } else {
-    const lp = document.getElementById('leftPanel');
-    if (lp) lp.style.display = '';
-  }
-}
-
-// También parchamos toggleCalView para usar el mismo sistema
-const _toggleCalViewOriginal = typeof toggleCalView === 'function' ? toggleCalView : null;
-function toggleCalView() {
-  const calView = document.getElementById('calView');
-  const yaActivo = calView?.classList.contains('activo');
-  _ocultarTodosLosPaneles();
-  if (!yaActivo) {
-    calView?.classList.add('activo');
-    if (calView) calView.style.display = 'flex';
-    document.getElementById('calTabBtn')?.classList.add('activo');
-  } else {
-    const lp = document.getElementById('leftPanel');
-    if (lp) lp.style.display = '';
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// MÓDULO 2: DETECTOR DE UNIDADES FANTASMA
-// ══════════════════════════════════════════════════════════════
-const FANTASMA_UMBRAL_MS = 30 * 60 * 1000; // 30 minutos
-
-let _fantasmasDetectados = {};  // unitId → {ultimaVez, minutos}
-
-function _iniciarDetectorFantasmas() {
-  // Revisar cada 2 minutos
-  _fantasmaInterv = setInterval(_detectarFantasmas, 2 * 60 * 1000);
-  _detectarFantasmas(); // Ejecutar inmediatamente
-}
-
-function _detectarFantasmas() {
-  const ahora = Date.now();
-  _fantasmasDetectados = {};
-
-  Object.entries(S.unidades || {}).forEach(([id, u]) => {
-    if (!u.ultimaActualizacion) return;
-    const diff = ahora - u.ultimaActualizacion;
-    if (diff >= FANTASMA_UMBRAL_MS) {
-      _fantasmasDetectados[id] = {
-        id, unidadNumero: u.id || id,
-        ultimaVez: u.ultimaActualizacion,
-        minutosInactivo: Math.floor(diff / 60000),
-      };
+  const offl = [];
+  Object.entries(S.unidades).forEach(([uid, d]) => {
+    const diff = now - (d.hora_gps || 0);
+    if (diff > OFFLINE_THRESHOLD_MS) {
+      const mins = Math.round(diff / 60000);
+      offl.push({ uid, mins, status: d.status || 'Desconocido', nombre: d.nombre || uid });
     }
   });
-
-  const n = Object.keys(_fantasmasDetectados).length;
-  const badge = document.getElementById('fantasmaBadge');
-  if (badge) {
-    badge.textContent = n;
-    badge.classList.toggle('visible', n > 0);
-  }
-
-  if (_fantasmaActivo) _renderFantasmas();
-}
-
-function _renderFantasmas() {
-  const lista = document.getElementById('fantasmaLista');
-  if (!lista) return;
-
-  const items = Object.values(_fantasmasDetectados);
-  if (items.length === 0) {
-    lista.innerHTML = '<div class="cola-empty" style="color:var(--green)">✅ Todas las unidades reportando correctamente</div>';
+  if (offl.length === 0) {
+    lista.innerHTML = '<div style="font-size:11px;color:var(--text-dim);padding:6px 0">✅ Todas con señal GPS</div>';
     return;
   }
-
-  lista.innerHTML = items
-    .sort((a,b) => b.minutosInactivo - a.minutosInactivo)
-    .map(f => {
-      const fecha = new Date(f.ultimaVez).toLocaleTimeString('es-MX',
-        { hour: '2-digit', minute: '2-digit' });
-      return `<div class="fantasma-card">
-        <div class="fantasma-header">
-          <span class="fantasma-unidad">👻 Unidad ${f.unidadNumero}</span>
-          <span class="fantasma-tiempo">${f.minutosInactivo} min sin señal</span>
-        </div>
-        <div class="fantasma-ultima">Último reporte: ${fecha}</div>
-        <button class="btn-fantasma-ok" onclick="_ignorarFantasma('${f.id}')">
-          📞 Contactado — Ignorar por ahora
-        </button>
-      </div>`;
-    }).join('');
-}
-
-function _ignorarFantasma(unitId) {
-  delete _fantasmasDetectados[unitId];
-  _renderFantasmas();
-  const n = Object.keys(_fantasmasDetectados).length;
-  const badge = document.getElementById('fantasmaBadge');
-  if (badge) { badge.textContent = n; badge.classList.toggle('visible', n > 0); }
+  offl.sort((a, b) => b.mins - a.mins);
+  lista.innerHTML = offl.map(u => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;">
+      <span style="color:var(--text-main);">🚕 Unidad <b>${u.uid}</b></span>
+      <span style="color:var(--gray);font-family:var(--font-mono);">⏱ ${u.mins}m sin señal</span>
+    </div>`).join('');
 }
 
 </script>
