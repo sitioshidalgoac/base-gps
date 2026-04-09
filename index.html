@@ -1,1885 +1,2109 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>SITIOS HIDALGO A.C. — Base Central</title>
-  <meta name="description" content="Panel de control y monitoreo GPS — Nochixtlán, Oaxaca" />
-
-  <!-- ═══════════════════════════════════════════════════════
-       ⚠️  ANTES DE DESPLEGAR — PASOS REQUERIDOS:
-       1. Reemplaza 1:140903781731:web:2178219a57a3244db42f56 con tu appId de Firebase:
-          Firebase Console → sitios-hidalgo-gps →
-          ⚙ Configuración → Tus apps → SDK → appId
-       2. Agrega sitiohidalgobase.netlify.app en:
-          Firebase Console → Authentication → Settings →
-          Dominios autorizados
-  ═══════════════════════════════════════════════════════ -->
-
-  <!-- Google Fonts - Rajdhani (display) + JetBrains Mono (IDs) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
-
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-
-  <style>
-    /* ═══════════════════════════════════════════
-       DESIGN TOKEN SYSTEM — "Mission Control"
-       Aesthetic: Industrial / Tactical Operations
-    ═══════════════════════════════════════════ */
-    :root {
-      --bg-root:    #080a0e;
-      --bg-panel:   #0f1218;
-      --bg-card:    #161b24;
-      --bg-hover:   #1c2230;
-      --border:     #1f2937;
-      --border-lit: #2d3a4d;
-
-      --amber:      #f59e0b;
-      --amber-dim:  rgba(245,158,11,0.15);
-      --amber-glow: rgba(245,158,11,0.3);
-      --green:      #10b981;
-      --green-dim:  rgba(16,185,129,0.12);
-      --red:        #ef4444;
-      --red-dim:    rgba(239,68,68,0.12);
-      --blue:       #3b82f6;
-      --blue-dim:   rgba(59,130,246,0.12);
-      --gray:       #4b5563;
-      --gray-dim:   rgba(75,85,99,0.12);
-
-      --text:       #e2e8f0;
-      --text-dim:   #64748b;
-      --text-mid:   #94a3b8;
-
-      --font-ui:    'Rajdhani', system-ui, sans-serif;
-      --font-mono:  'JetBrains Mono', monospace;
-
-      --header-h:   52px;
-      --panel-w:    292px;
-      --radius:     6px;
-
-      --shadow-md:  0 4px 20px rgba(0,0,0,0.5);
-      --shadow-lg:  0 8px 40px rgba(0,0,0,0.6);
-    }
-
-    /* ═══ RESET ═══ */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%; width: 100%; overflow: hidden;
-      font-family: var(--font-ui);
-      background: var(--bg-root);
-      color: var(--text);
-      font-size: 14px;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ═══ SCAN LINE overlay (subtle tactical feel) ═══ */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent, transparent 2px,
-        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
-      );
-    }
-
-    /* ═══════════════════════════════════════
-       LOGIN SCREEN
-    ═══════════════════════════════════════ */
-    #loginOverlay {
-      position: fixed; inset: 0; z-index: 9000;
-      background: var(--bg-root);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-    }
-    .login-grid-bg {
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-      background-size: 40px 40px;
-    }
-    .login-card {
-      position: relative; z-index: 1;
-      background: var(--bg-panel);
-      border: 1px solid var(--border-lit);
-      border-radius: 12px;
-      padding: 40px 36px;
-      width: 380px;
-      box-shadow: var(--shadow-lg), 0 0 80px rgba(59,130,246,0.06);
-    }
-    .login-brand {
-      text-align: center; margin-bottom: 32px;
-    }
-    /* .login-icon — reemplazado por <img> del logo */
-    .login-title {
-      font-family: var(--font-ui);
-      font-size: 22px; font-weight: 700; letter-spacing: 1px;
-      color: var(--text); text-transform: uppercase;
-    }
-    .login-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; letter-spacing: 0.5px; }
-    .login-divider {
-      height: 1px; background: var(--border);
-      margin: 0 -36px 28px; position: relative;
-    }
-    .login-divider::before {
-      content: 'ACCESO OPERADORES';
-      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-      background: var(--bg-panel);
-      padding: 0 12px;
-      font-size: 9px; color: var(--text-dim); letter-spacing: 2px; font-weight: 600;
-    }
-    .form-field { margin-bottom: 16px; }
-    .form-label {
-      display: block; font-size: 10px; font-weight: 600;
-      color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-    .form-input {
-      width: 100%; padding: 11px 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text); font-size: 14px; font-family: var(--font-ui);
-      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .form-input:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-    }
-    #loginBtn {
-      width: 100%; padding: 13px;
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      border: none; border-radius: var(--radius);
-      color: #fff; font-family: var(--font-ui);
-      font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-      cursor: pointer; margin-top: 8px;
-      transition: opacity 0.2s, transform 0.1s;
-      box-shadow: 0 4px 16px rgba(37,99,235,0.4);
-    }
-    #loginBtn:hover:not(:disabled) { opacity: 0.92; }
-    #loginBtn:active:not(:disabled) { transform: scale(0.99); }
-    #loginBtn:disabled { opacity: 0.45; cursor: not-allowed; }
-    #loginError {
-      margin-top: 12px; min-height: 18px;
-      text-align: center; font-size: 12px; color: var(--red);
-    }
-    #setupWarning {
-      margin-top: 12px; padding: 10px 12px;
-      background: var(--amber-dim); border: 1px solid var(--amber-glow);
-      border-radius: var(--radius); font-size: 11px; color: var(--amber);
-      display: none; line-height: 1.5;
-    }
-
-    /* ═══════════════════════════════════════
-       MAIN APP
-    ═══════════════════════════════════════ */
-    #app { display: none; flex-direction: column; height: 100%; }
-
-    /* HEADER */
-    header {
-      height: var(--header-h); min-height: var(--header-h);
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center;
-      padding: 0 14px; gap: 10px;
-      z-index: 200; flex-shrink: 0;
-      position: relative;
-    }
-    header::after {
-      content: '';
-      position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--amber-glow), transparent);
-    }
-    .hdr-brand { display: flex; align-items: center; gap: 10px; }
-    .hdr-icon { font-size: 22px; filter: drop-shadow(0 0 6px rgba(245,158,11,0.5)); }
-    .hdr-name { font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-    .hdr-sub  { font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; }
-    .hdr-sep { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
-    .hdr-space { flex: 1; }
-
-    .conn-badge {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 11px; color: var(--text-dim); font-family: var(--font-mono);
-    }
-    .conn-dot {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--gray);
-      transition: background 0.3s;
-    }
-    .conn-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
-
-    .hdr-clock {
-      font-family: var(--font-mono); font-size: 15px; font-weight: 700;
-      color: var(--amber); letter-spacing: 2px;
-      padding: 4px 10px; border: 1px solid var(--amber-glow);
-      border-radius: var(--radius); background: var(--amber-dim);
-    }
-    .hdr-user {
-      font-size: 12px; color: var(--text-dim);
-      padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-    }
-    .hdr-role {
-      display: inline-block; padding: 1px 7px;
-      background: var(--blue-dim); color: var(--blue);
-      border-radius: 20px; font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.5px; margin-left: 5px;
-    }
-
-    /* HEADER BUTTONS */
-    .hbtn {
-      display: flex; align-items: center; gap: 5px;
-      padding: 6px 12px; border-radius: var(--radius);
-      font-family: var(--font-ui); font-size: 12px; font-weight: 600;
-      letter-spacing: 0.5px; text-transform: uppercase;
-      cursor: pointer; border: 1px solid; transition: all 0.2s;
-    }
-    .hbtn-fds {
-      color: var(--red); border-color: rgba(239,68,68,0.3); background: var(--red-dim);
-    }
-    .hbtn-fds:hover { background: rgba(239,68,68,0.2); }
-    .hbtn-fds.active { background: var(--red); color: #fff; border-color: var(--red); }
-    .hbtn-logout {
-      color: var(--text-dim); border-color: var(--border); background: transparent;
-    }
-    .hbtn-logout:hover { color: var(--text); background: var(--bg-hover); }
-
-    /* ═══ BODY ═══ */
-    .app-body { flex: 1; display: flex; overflow: hidden; }
-
-    /* ═══════════════════════════════════════
-       LEFT PANEL
-    ═══════════════════════════════════════ */
-    #leftPanel {
-      width: var(--panel-w); min-width: var(--panel-w);
-      background: var(--bg-panel);
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-
-    .ps { /* panel section */
-      padding: 12px 12px 12px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .ps-title {
-      font-size: 9px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--text-dim);
-      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
-    }
-    .ps-title::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
-    }
-
-    /* STAT CARDS */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .stat-card {
-      border-radius: var(--radius); padding: 10px 12px;
-      border: 1px solid var(--border);
-      background: var(--bg-card);
-      cursor: default;
-      transition: border-color 0.2s;
-    }
-    .stat-card:hover { border-color: var(--border-lit); }
-    .stat-val { font-family: var(--font-mono); font-size: 28px; font-weight: 700; line-height: 1; }
-    .stat-lbl { font-size: 10px; color: var(--text-dim); margin-top: 3px; letter-spacing: 0.3px; }
-    .sc-total   .stat-val { color: var(--amber); }
-    .sc-libre   .stat-val { color: var(--green); }
-    .sc-ocup    .stat-val { color: #f97316; }
-    .sc-offline .stat-val { color: var(--gray); }
-    .sc-sos     { border-color: rgba(239,68,68,0.4) !important; background: var(--red-dim); }
-    .sc-sos     .stat-val { color: var(--red); }
-
-    /* BASE ITEMS */
-    .base-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 7px 9px; border-radius: var(--radius);
-      border: 1px solid var(--border); margin-bottom: 5px;
-      background: var(--bg-card); cursor: pointer;
-      transition: all 0.15s;
-    }
-    .base-row:last-child { margin-bottom: 0; }
-    .base-row:hover { border-color: var(--blue); background: var(--bg-hover); }
-    .base-id {
-      font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-      color: var(--blue); background: var(--blue-dim);
-      padding: 1px 6px; border-radius: 4px; flex-shrink: 0;
-    }
-    .base-nm { font-size: 12px; color: var(--text-mid); flex: 1; }
-    .base-cnt {
-      font-family: var(--font-mono); font-size: 14px; font-weight: 700;
-      padding: 1px 7px; border-radius: 4px;
-      color: var(--green); background: var(--green-dim);
-      min-width: 26px; text-align: center;
-    }
-    .base-cnt.zero { color: var(--gray); background: var(--gray-dim); }
-
-    /* UNITS LIST */
-    .units-header {
-      padding: 8px 12px 4px;
-      display: flex; align-items: center; justify-content: space-between;
-      flex-shrink: 0;
-    }
-    #lastUpdate { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
-    #unitsList { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
-    #unitsList::-webkit-scrollbar { width: 3px; }
-    #unitsList::-webkit-scrollbar-track { background: transparent; }
-    #unitsList::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 2px; }
-
-    .unit-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 7px 9px; border-radius: var(--radius);
-      border: 1px solid var(--border); margin-bottom: 4px;
-      background: var(--bg-card); cursor: pointer;
-      transition: all 0.15s;
-    }
-    .unit-row:hover { border-color: var(--amber); background: var(--bg-hover); }
-    .unit-row.sos-item { border-color: var(--red); background: var(--red-dim); }
-    .unit-row.offline-item { opacity: 0.55; }
-    .u-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .u-id { font-family: var(--font-mono); font-size: 12px; font-weight: 700; flex: 1; }
-    .u-info { text-align: right; }
-    .u-estado { font-size: 10px; color: var(--text-mid); }
-    .u-time   { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
-    .u-vel    { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
-    .u-empty  { padding: 24px 12px; text-align: center; color: var(--text-dim); font-size: 12px; }
-
-    /* ═══════════════════════════════════════
-       MAP AREA
-    ═══════════════════════════════════════ */
-    #mapWrap { flex: 1; position: relative; overflow: hidden; }
-    #map { position: absolute; inset: 0; }
-
-    /* FDS BANNER */
-    #fdsBanner {
-      display: none;
-      position: absolute; top: 0; left: 0; right: 0; z-index: 600;
-      background: var(--red); color: #fff;
-      text-align: center; padding: 7px 12px;
-      font-size: 13px; font-weight: 700; letter-spacing: 1px;
-      animation: fdsPulse 2s ease-in-out infinite;
-    }
-    @keyframes fdsPulse {
-      0%,100% { opacity: 1; } 50% { opacity: 0.7; }
-    }
-
-    /* MAP INFO BAR */
-    .map-bar {
-      position: absolute; top: 10px; left: 50%;
-      transform: translateX(-50%); z-index: 500;
-      background: rgba(8,10,14,0.88);
-      border: 1px solid var(--border-lit);
-      border-radius: 20px; padding: 5px 16px;
-      font-size: 11px; color: var(--text-dim);
-      backdrop-filter: blur(6px); white-space: nowrap;
-      pointer-events: none;
-    }
-    .map-bar b { color: var(--amber); font-family: var(--font-mono); }
-
-    /* MAP LEGEND */
-    .map-legend {
-      position: absolute; bottom: 28px; right: 10px; z-index: 500;
-      background: rgba(8,10,14,0.88);
-      border: 1px solid var(--border-lit);
-      border-radius: var(--radius); padding: 10px 12px;
-      backdrop-filter: blur(6px); pointer-events: none;
-    }
-    .leg-title { font-size: 9px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-    .leg-row { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-mid); margin-bottom: 4px; }
-    .leg-row:last-child { margin-bottom: 0; }
-    .leg-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .leg-sq  { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-
-    /* ═══════════════════════════════════════
-       SOS MODAL
-    ═══════════════════════════════════════ */
-    #sosModal {
-      position: fixed; inset: 0; z-index: 9500;
-      background: rgba(0,0,0,0.75); display: none;
-      align-items: center; justify-content: center;
-      backdrop-filter: blur(4px);
-    }
-    #sosModal.show { display: flex; }
-    .sos-card {
-      background: var(--bg-panel);
-      border: 2px solid var(--red);
-      border-radius: 16px; padding: 36px 32px;
-      text-align: center; max-width: 380px; width: 90%;
-      box-shadow: 0 0 60px rgba(239,68,68,0.5), var(--shadow-lg);
-      animation: sosAppear 0.3s ease;
-    }
-    @keyframes sosAppear {
-      from { transform: scale(0.85); opacity: 0; }
-      to   { transform: scale(1);    opacity: 1; }
-    }
-    .sos-beacon { font-size: 54px; animation: sosBounce 1s ease-in-out infinite; display: block; margin-bottom: 12px; }
-    @keyframes sosBounce {
-      0%,100% { transform: scale(1); } 50% { transform: scale(1.15); }
-    }
-    .sos-head { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 10px; }
-    .sos-unit-id { font-family: var(--font-mono); font-size: 36px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .sos-ts { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; }
-    .sos-lat-lng { font-family: var(--font-mono); font-size: 11px; color: var(--text-mid); margin-bottom: 20px; }
-    .sos-dismiss {
-      width: 100%; padding: 14px; border: none; border-radius: var(--radius);
-      background: var(--red); color: #fff;
-      font-family: var(--font-ui); font-size: 15px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .sos-dismiss:hover { opacity: 0.88; }
-
-    /* ═══════════════════════════════════════
-       MARKER ANIMATIONS
-    ═══════════════════════════════════════ */
-    @keyframes sosPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.8); }
-      70%  { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
-      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-    }
-    .marker-sos-pulse { animation: sosPulse 1.4s ease-out infinite; }
-
-    /* Leaflet overrides */
-    .leaflet-popup-content-wrapper {
-      background: var(--bg-card); color: var(--text); border: 1px solid var(--border-lit);
-      border-radius: var(--radius); box-shadow: var(--shadow-md); font-family: var(--font-ui);
-    }
-    .leaflet-popup-tip { background: var(--bg-card); }
-    .leaflet-control-zoom a {
-      background: var(--bg-card) !important; color: var(--text) !important;
-      border-color: var(--border) !important;
-    }
-    .leaflet-control-zoom a:hover { background: var(--bg-hover) !important; }
-    .leaflet-bar { border: 1px solid var(--border) !important; box-shadow: var(--shadow-md) !important; }
-
-    /* ═══ UTIL ═══ */
-    .hidden { display: none !important; }
-    .pulse-dot {
-      display: inline-block; width: 6px; height: 6px;
-      border-radius: 50%; background: var(--red);
-      animation: sosPulse 1s ease-out infinite; margin-right: 4px;
-    }
-  
-    /* ═══════════════════════════════════════════
-       PANEL DE CALIFICACIONES — Mission Control
-    ═══════════════════════════════════════════ */
-    .ps-cal { padding: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-y: auto; }
-
-    /* Alerta card */
-    .cal-alerta {
-      background: rgba(239,68,68,0.06);
-      border: 1px solid var(--red);
-      border-radius: var(--radius);
-      padding: 10px;
-      margin-bottom: 8px;
-      animation: pulseCal 2s infinite;
-    }
-    @keyframes pulseCal {
-      0%,100% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-      50%      { border-color: #f87171; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
-    }
-    .cal-alerta.atendida {
-      background: rgba(16,185,129,0.06);
-      border-color: var(--green);
-      animation: none;
-    }
-    .cal-al-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .cal-al-unidad { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--text); }
-    .cal-al-stars  { font-size: 13px; letter-spacing: -2px; }
-    .cal-al-fecha  { font-size: 10px; color: #7f1d1d; margin-bottom: 6px; }
-    .cal-al-tags   { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-    .cal-al-tag    { font-size: 10px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 2px 7px; color: #fca5a5; }
-
-    /* Temporizador */
-    .cal-timer     { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
-    .cal-timer-txt { font-family: var(--font-mono); font-size: 11px; font-weight: 700; min-width: 70px; }
-    .cal-timer-txt.urgente { color: var(--red); }
-    .cal-timer-txt.ok      { color: var(--amber); }
-    .cal-timer-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-    .cal-timer-fill { height: 100%; border-radius: 2px; transition: width 1s linear, background-color 1s; }
-
-    /* Botón atender */
-    .btn-cal-atender {
-      width: 100%; padding: 7px;
-      background: rgba(239,68,68,0.15); border: 1px solid var(--red);
-      border-radius: var(--radius); color: #fca5a5;
-      font-size: 11px; font-weight: 700; font-family: var(--font-ui);
-      cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s;
-    }
-    .btn-cal-atender:hover:not(:disabled) { background: rgba(239,68,68,0.28); }
-    .btn-cal-atender.atendido {
-      background: rgba(16,185,129,0.1); border-color: var(--green);
-      color: #6ee7b7; cursor: default;
-    }
-
-    /* Sin alertas */
-    .cal-ok {
-      text-align: center; padding: 12px 8px;
-      background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);
-      border-radius: var(--radius); font-size: 11px; color: var(--green);
-    }
-
-    /* Stats row del día */
-    .cal-stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; }
-    .cal-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 6px; text-align: center; }
-    .cal-stat-n { font-family: var(--font-mono); font-size: 20px; font-weight: 700; line-height: 1; display: block; }
-    .cal-stat-l { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-top: 2px; }
-    .cal-stat-n.verde { color: var(--green); }
-    .cal-stat-n.rojo  { color: var(--red); }
-    .cal-stat-n.azul  { color: var(--blue); }
-
-    /* Ranking */
-    .cal-rank-item {
-      display: flex; align-items: center; gap: 7px;
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 7px 9px; margin-bottom: 5px;
-      cursor: pointer; transition: border-color 0.2s;
-    }
-    .cal-rank-item:hover { border-color: var(--border-lit); }
-    .cal-rank-pos  { font-size: 10px; color: var(--text-dim); min-width: 16px; }
-    .cal-rank-u    { font-family: var(--font-mono); font-size: 12px; font-weight: 700; flex: 1; }
-    .cal-rank-avg  { font-size: 11px; }
-    .cal-rank-badge { font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 700; }
-    .cal-rank-badge.verde { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
-    .cal-rank-badge.rojo  { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
-    .cal-rank-badge.gris  { background: var(--gray-dim); color: var(--gray); border: 1px solid rgba(75,85,99,0.3); }
-
-    /* Tab del header */
-    .cal-tab-btn {
-      background: none; border: none; color: var(--text-dim);
-      font-family: var(--font-ui); font-size: 11px; font-weight: 600;
-      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-      padding: 0 10px; height: var(--header-h);
-      border-bottom: 2px solid transparent; transition: all 0.2s;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .cal-tab-btn:hover { color: var(--text); }
-    .cal-tab-btn.activo { color: var(--amber); border-bottom-color: var(--amber); }
-    .cal-tab-btn .cal-badge {
-      background: var(--red); color: #fff;
-      font-size: 9px; font-weight: 700; border-radius: 8px;
-      padding: 1px 5px; display: none;
-    }
-    .cal-tab-btn .cal-badge.visible { display: inline; }
-
-    /* Vista del panel de calificaciones */
-    #calView { display: none; flex-direction: column; height: 100%; overflow-y: auto; }
-    #calView.activo { display: flex; }
-
-    /* Modal historial */
-    #cal-modal-hist {
-      position: fixed; inset: 0; z-index: 5000;
-      background: rgba(0,0,0,0.75);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .cal-hist-inner {
-      background: var(--bg-panel); border: 1px solid var(--border-lit);
-      border-radius: 10px; padding: 20px; width: 320px; max-height: 80vh;
-      overflow-y: auto;
-    }
-    .cal-hist-title { font-size: 13px; font-weight: 700; color: var(--amber); margin: 0 0 14px; display: flex; justify-content: space-between; }
-    .cal-hist-close { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 0; }
-    .cal-hist-item { background: var(--bg-card); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid var(--border); }
-    .cal-hist-item.alta  { border-left-color: var(--green); }
-    .cal-hist-item.media { border-left-color: var(--amber); }
-    .cal-hist-item.baja  { border-left-color: var(--red); }
-
-  </style>
-</head>
-<body>
-
-<!-- ══════════════════════════════════════
-     LOGIN SCREEN
-══════════════════════════════════════ -->
-<div id="loginOverlay">
-  <div class="login-grid-bg"></div>
-  <div class="login-card">
-    <div class="login-brand">
-      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwMDAgQDAwMEBAQFBgoGBgUFBgwICQcKDgwPDg4MDQ0PERYTDxAVEQ0NExoTFRcYGRkZDxIbHRsYHRYYGRj/2wBDAQQEBAYFBgsGBgsYEA0QGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBj/wAARCADIAMgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD78ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooo60AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFc54z8baL4G0SK/1Zby5luZhbWen6fbtc3V7MQSIoYl5ZsKxPQAAkkAZppNuyE3bVnR0V5VN8W9T1fV9N8JeFvCV1a+LNU0A6/BaeIz9kitIxcJCyXGzc4kXezFFB+7jIzkeHS+MPiR4p+CHh74i+IPHF2sureOLDR/7I0qIWdpbRR6m0ThSp8yTzAnO9iMHGK3jh5PV6EOor2R9Y3Pibw5ZeI7bw/ea/pdvq90u+30+W7jS4mHqkZO5hweg7Vi6B8SvDXifxre+G9EGp3T2glD6gLCVbGR4nEcscdyV8uR0ZsEKTyG9Dj5V1S3g8Tfssan46azgm+IeqfERFs7soDdR3UeqLDBBG/3gqQJgIDgLuPcmu2+DQvfC/7Sl/4S+H/xJg8afD++i1DUrvTlxI3h25NwCIzIOFLyPKAnBO1yV43HR4aKi3fVfp/WhPtHex2Gm/GWHS/2h/in4V8deM9B0fRtEj046Qt/NDZtma3aSX52IMh3bfpx61xfwd+NnjOf4c/CyLXJ49dvPFUHiC6vNQvWxKhsizRKgQBdpGFPHQcV0vhfwFDqf7W3xi8QeJfAyXtnPFpY0m/1LTVkjkZLUrKIHkUg4baG2+gz0rivhd8IPiNpvg/4Oxan4Zexk8O2niWDU4ri4iDQNdgi3wAx3Bs9s474rW1Lld+y/wDSX+v4md53+/8ANfodb8Nfj1471iX4fXvxA8OeHrbRfH0ci6Te6NPMXtbhULiG4jkH8aq2GVjgjB9a2PDv7RVrrPg34q+IZdAIj8DTTSwwxzYbULNY2eKYFhhfM8t8dRgA15z4b+GXxpj+G/w/0W/8F2mmyfDvT7q7tAdUhuH1bUjBJFbKgU7Yo1aQszO2TgADvVTXvgv4/wDA0Xi3RdKl1nxfpuvfDafRhcJaQo0V3apttoSsSru3I7qrEFiTgk0OnRbe39P/ACKUpI+ita+LPg/wx4F0HxL4ku5rFdcWH7DYwwSXVzPJJGHEccUSszkA84GBW1ofjXwt4j8J2viXSdZt5NMuZGhjnmzB+8VyjRssgVlcMrKVIBBBGK+b4/Fmmt8Sfgz4s1nT9a0TR/C9vceHtVm17TpbBLC8uLKNYZCZQBsYxPH5n3QWUZ+YVW0HWtG+Pfx88BXvjHw5pknh2XSNee00qRhdWlxewXq27y4IAdzFhxkEjdkHvWTwytf+uun4FKo2fXFFeK/s+eJZo/g34it9a1GWaw8J6/qmkQXtzIZHNlbSExlnPLbIzsyecIK1fgL8T9Y+KHgTVL/xHpkOmatp2qy2U1oilSsRVJoGYEnBMUqZ7ZB6dKwnRlG/kWpp2PVaKpWmr6Vf311Z2Op2d1c2j7LmGCdXeBvR1Byp9jirtZWsWFFFFABRRRQAUUUUAFFFFABRRRQAV4R+0H4F+L2t+JPCHjn4P6vpltq/h1bxXtdQKhZVnRASu9ShOEK4bH3sgjmvd64bx58NYvH+p6c1/wCLvE+maZbxSw3elaRem1h1JJNuUnKjcVwpHylThmGea1oz5JqX/BIqR5o2PFPgz4n8T/EX4++BviH4h0kwXF98ObgXUttA624k/tMBME5Cl1j3hc9M44Fdj4O+A9yvwA0HwJ4x1IQXGm+JG8RF9LcOGZb2S5ijLOvT5lDYHY4PevarCwstK0q20zTbWK0s7WJYILeFQqRRqAFVVHAAAAAqzVzrtv3VZf8AD/5ijTtucVp/wj+HGlfEG48b2HhSzh1yed7p7nc7Ks7jDzJGWKJIw4LqoY5OTya6+C0tbXf9mt4od7b28tAu4+px1PvU1Z+s6tBo+lvdzFM8hFZwgJwTyx4VQASWPAAJrmq1uWLnUeiNIQu7RRLf6laadEGuZPmbOyNeWfAycD0Hc9B3IrxPxH+1D4G0rWJdH0Z7zxHqEZKvaeHLQ6gUPo0oKxA/7pavMdd1vW/jrqtyI9Su7H4eJIYnmgJhn8Qsrc4PWO0B4VerYycn7vOeL/HVv8PrqHwH8OPC8M+pCASyQWsDNHaoful1Tl2PXk9ME5zWUcPUnReKxM/Z0+nVv7v0dvVamGGnXzDFxwGWQUpvq9F5vXRJd3v2voesJ+1I0GZ9W+GvjzT7QHBuG02K4Vcf3lRwRXpXgT4z+CPH1o8+h61Z3flDM4jLJLb/APXaFwHjH+1gr/tV8VeEvGfxM8G3dzd6p4d1e/0+5uDc3IubSVCHb7zK+3Ck+h446CvYrnwRovxE02w8b+FJ7jR9cCC4sdf0wCO4ib+7IB98ZyGVs9xmscFTjjIOWEqtTW8Zf8P+VvVHr8R5LmXDlWP1tRq0ZaKcLWva7WmzXmtUrrrb6znt7TULF7e5hhuraZNrxyKHSRT2IOQQa5fxF8M/B/iTQbHS59MOnDTpjcafc6PI1hPYyEFWeGSHaUJDEEDhgcEGvOPhD8U9UuNTufBHjm3h0/xJpyK9zDENsFxCxwt5b/8ATJjgOn8DEEYBIX3WtsPiHK8XpKO6/rp/w29zzlyTipw1i/6+8831f4T6fa/s/wB38LfAhi0axu0+zTSzO8jvDLKDdMz5LNLIhlG4n7zA9BXnvhfSbj4KfHrxbY3lx4guvDfiiDSxpmr36vebNQLGzW3eVVzwDAAX/hAyTjNfRVGAa7I1pJOL1T/r9CXBXuj5q/Zc+GXhF/gv4U8ZzaabXxraXt82qalC5jup7kXE0U0Ny3WROB8jZAKqwwea+la851P4WzWniTVvFHgHxVqfhnU9QSaeewjKS6bd3rRFEuZoGUncDsZvLZN+wbs131it4ml2yajLFLdiJRPJCpVGk2jcVB6AnOBRXnzy577/AIBBcqsWKKKKxLCiiigAooooAKKKKACiiigAooooAKKKKACvmP8AaA8VL4h8V6V8MbfUxZwa05XUJ1bDQ6bG4WXGOjTyjygf7qN2Jr6N1q7ksfD93dQ/61YyIh6uflX9SK+AvEWqQeIfiP4y8Sw36+Zb6guk6eC+M29qPLDDg5DSB2PqWr53Pcc6CSjraz12u3pfy0b9UjjzPE/VsJKS3lovTr+i9Gz3bwXeaRPpstnLDb6dZWsy2VnGCBsHRY9oPYAfXmvHIPC8uo/F/V9F+I8vi3XI4YZrq4l0EfYLIOsRkjjKIhLbkULuLZDEDnGaueBbLWE8Z6VqF1YyS2hmR5SowH5yoPq2QeBzwa+iIzYiLVTLeRxs8o8tC4BcbOcD6VjluZV8bQ+r4yT9zZ63d7/8Mv8AgnncP5jUwvPKlZN2V+u/R7/cfL2heANKh0DX9Q1b4TeMtC1K2txcaUdE1S5Es7F1TymL7/mXeGLAdFb5eK9l+A39uW/w3u9d1jXL3U9LZC1nZ6jaKt7ZlGcTLJKAPNyy8EgepweK9RWTw+2pQG21G1JSX95sfG1fUk9s4rzH/hZHhvWPBer2Xg7xRbXWsRyPPHbJu8x4/McsMFeflOSPTmvRq1qOBcqlJt2T0+X+Z71fMcwxuEqOUXNRV27OVt9bu9tt7rqWviJaf8JJ4N034i+DEiPinw+z32nxEjN5EB/pFm+PvJJHuGPXHrXsvw38Waf4w8C2OqabOZraa3juLd3PzNBIuU3f7S/Mjf7SGvk7w94m1e319LUySwG0VriFSfuOOcDg9Txiu/8A2Xtfe3vtd8KSkKmnao6wJjbst7tWuI1A9FlScD/frw8uz2eKrx9tG01ZPzTsr+WrT9EzxsmxqrSlRfVXXqv+Bf8AA+oaKKK+zPYCiiigAooooAKKKKACiiigAooooAKKKKACiiigAqpb6jbXOqXdhCxaW02Cb0VmG4L9cYP4ijU9StdJ0uXUL1ykEW3ew7AsFz+tYXgyymtv7bubtwbq91Se5ZM5KR52RZHYFEBHsa5KuIarwox63b8lZ2+9/kzWNNOEpv5ev/DDfiBqP9l+ETdE4CTLJ/37Vpf/AGnX5yaTpuu+G9B0bU9f0U3OnXVpHqpaUkRywyncWLryOW+ufWvvz43NKPhvtizl2uFAHc/YrjH614j4ft0uP2f/AAVeapq0sFmPD1tEEtoMq6LCGw+WxnrycCvBzGMKuImqmyt+V/1OLH5asdCEHK1k3+Nv0IfDHi/wSfAV7rf/AAlaXDiRrRLSRmHkfOGjwP723GXrP8E36eIPi9p9jqmtzW7XNnK9rbQskCyJs4CZBZ2xye/HQVq6X8LvA+si4vdN1S7SPyXuJHhi2oyKSp4DYyCpOMZGc96i1zwr4E8dfCjVLDwf4pXUdV0fSn1XStStLfa1pPaMG83zcAuXlURgZ+VFOANxzrSgsRFwg+Wy3W9/mTgMuWEV6qUr2t1Ej8V3h/aV1DwIrg6PHHc2aFJ2+0xzQWcd200jfd8s+YE27QQQDk5xWD4U+GPw20y18N+K7TxPevYa9YGUNcTiJW3KFJDKFKrnIweR3zXzzG3jL4h/ELwvp+s6rdaF4n8V6hLNeao8DRBvtEaLEf3ZUMhhjwFU4w4B719gQeEdD8LeFvC3wp1DWrlLa1sfIS7MSRI/JZmkLPjJbOABxuArmqqNOcPaS5tNb6p6b9fI+ohTxEMPVw2C932kbSS6x1un5Wb+88M8ZeK9K0jxjFb6fq9tNc2MrK0unsFtlX5Snlk8ls5znjPrXX/AHW7xf2iL+W7gmhj1LSLe8VpFIEvk3cfzgnhvlmbketdY3w/+FOmT297FqKXct9eCHItYpgjKSC7ZbCoNnU+o7mrOuBrL44eEHtNVh1GCPwzqKxSxIBlRdW/JIYhjvJ6Y5FcFSjRhKeIg9eWX4J/5Hy2D4ZxGArwr1bpcyVvV2PrGq1jf2+oW7y27ZCSvC4PVXRirA/iKs+tcZokqaJ431qzll3W2q6gk1ntOQZGhbzR+BhbP1FfY4jEOjUpp/DJ2flpdflb1aPQp01OMu61/r8zs6KKK6zIKKKKACiiigAooooAKKKKACiiigAooooAwvGdgmq+AtU0tpVje7gMETMcDzG4QZ922j8ax/hx9ruNM1PVdSJW8vrvzTC33oo1jWNAR2yEJ+hrZ8YaTca54G1PS7STZcyw5gbOMSKQyc9vmUVznw1v7rUbjXNQ1MGG8vLlJPIcYZRHDHE3HbDhh9Qa8HEWjmlJtPWPy05vxV7LvzeR309cLKz6/5fn+hc+J1uk3g2CWYDyYb+Ay57I7eUx/KQ18geEPH02ifBrSfDuvnw/nRWm0ow3DXHnhoJHiJIjYc4xggccHrX234p0f+3/Bep6MDhrq3eNG/uvjKn8GANfnv4t8KGb46anE8oso9dgXWoAI85lJ8u6TqOVmSQ49DXn585Uakpp2TSf3NqX5xOOpOvGnGWGgpzu42bstbNdV2fVHoekfHPTtGb/QNL0iIbDHiG3ugAuc4wz4xkDtwOOldr8Mdb8V+MJfEE3hbQNMh06+H2Jbl4/Ji08v88zLExzICZFkwp52kV5l4U8I6T4f1Nb/AFC0i1SCINLMtzbCQrGqFn2rnBbAO3P8WOtegfDT4gWXh+21vxnpuialpnhqezjeO01WYXE0t67YjhtxEAPmSM5UA7QgbnNcuRV/rEnX9ouVXWujbsnpp2uaRoY+mksWop9op6a21fM/ut8z5V1T4aeOrX9prUfht8P9V1TxBqGhakX093udgt2jEbmTa77IwpcZI7D04r3b4oeNPin8OfFui2vxn8OeDNatdSiY2Op6UtykUcijEkTpvBLAyA54GCCOAVHI/HG70nxZ4os/il8M7TxD4e+IsAQ38llBIkLyriNJCSAUYAgFicFeGVuTXe/Hd5Pjz+zP4W1zw/eW9x4h0J2uNV0lZE85JvIEco2ZBKbskOoxhlbpnH0E6NCtGTbT9NbXO2eKrQ5fY3jJK3bXby3/AOAc4nxQ8KXc6/afDukRhm3FmS+2g+p2zf0966rwJfxeL/jun2NNLXT9M0yz0uAaY0jRbrq+Wd/9YSchIGyM185+Ap4tcF1onimDU7DV7FDK00sJjDQLwd+Rjcvr/EMHJr6h/ZO8LfJbaw0bD7ZPNrjFxg+Tg21oD7kefJ9GBr5eFKo60qEnfaPSz5na6f8Ahu/kcyxeaVJxhjJKUFeSd3f3e6bdtWl+rPr3tXltjp91H8ZCbmZf7Ms7+4vLeVm+VpbhFjEY/wBoOJuO2DXqXavI9BtdQ1j4oJAkhk0ew1K61kSg/JIZkHkAf99SN+dfRZ1Z1MPGzb5la3k09fJfE/Q0wWkajv0/r59PmeuUUUV7xwBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAFe+tY77TLiylJCTxNExHUBgR/WvIfCeuajp/xEjj8VM8NzYWTaVdzMuBK7XKeTKfXeHHzd+T617NXi3xWfV7G71HTr2Pz9H1iFRZXrL81lcqQwiL/3GZQQD0LcdCK+c4hToxhjI3vB/J9VfsrpK/S76O69LLrVG6L6/f52+XTyPT5PEcEfjmHwybafz5bZrkP8u3aCBnrnGeOnXH1r51/aD+G+oyaguq+HLffqcFy+saKo/wCW02B9rsf+2qKJEHdkKj71e9eEvEum66q2bgLrFrbQSzpIoDsrxKwkU91+Yj2OQffX1/QrHxHoUumXwYI+GSWM7XhccrIh7MDyDXRWofX8O6kJKTu2vTZxf4p9nZ9DCSVOXs5pq61733Ul6aNf8E+J9N8RW2uaLZ+J7XWbCw8OfZ5f7RWcsLhXG1vKyMBQNp3A5LAgAc5rVXxh4LuLWK/HiizuLOJT9kEb7gd4BkkVBzljhNxAO2MDgdbfj/4a+MfCPjy58Q+D4bVtavWL6hocoEdn4iA/5bW5Pyx3J/ij43EkrnJU87p3xK+F+ttJo3irS7fw3qsH7ufTdbsxA0TDqobaB+e0+1fC1cG6FOUYRk47abxV7uMl3vbXqkraHr0cenJRxElGe+u0uiaf6bp3DWviJ4XuRZ6XY3t0v22cQyXKxOi20eCWkLY49OO59M1q6dbeCJPs8fh6+0tr0sogdpF83dnaF3Ng4IJUgcYJ4pJtS+B2mr9pnvPCqgD7wlSTP0VSc/lXD69NpfxZs5dC+G3hSOPT4biOW88V3SNY2dkyNuUhhgucjhOSTjCGjB0+ZwhSjOMU7t6JadXtt/W5eKxlOmm5yjKTVklq/RLzLniSxh8VeLoPh/pd9i1Mf2vXdRgbetlp6kZwRxvk+VUHcuo/ir7F8A6Ivg34dT6tcaY1vPPGLhrKEDNtBGgWGAZIHyRqB9c1wXwT+C+neHtIju54biS1eYXsk18m251e5HS4nU52Rrk+XF2yWOSST71KIzC4mCmPB3B+mO+c9q+syTKlRhzx0Svy36t/a9LaR8rvqeRiMROcnKr8Ttddkto/q/P0OZfxZZ3nw7g1tfMgOox+XaKcbpJGU7duD04J+gzXIfCiHVdQltr64SSLS9K06PT7ZTwJ5yqmWX324CA+xA71l+N/GOnXmsaDq2kwNd6fp8908MUa4W8uBiNAoHJBZm5xyFY16T4Hs9atPB1u3iF1/tCbMrwIgRLZT92JFHChVAGPXPWow9b6/mEY8zapLdLSWkWm35vZLflvtv01IfV8O3azl33Wr0+7f1Ojooor6w8gKKKKACiiigAooooAKKKKACiiigAooooAKyPE1rq954YuodDmt477bujW4jWSOTH8DA9j0z24Na9FZ1aaqQcG7X000fyKhLlkpdj59s7rxHq/xDsby98O3um6xaxmzvIrOF4luLUgqdh6I6gkjnBwuCCAD2fg/WvFmg+MZfC3jG6e/spQTp+qyY+YjkK7diR2bkEY5yK67xf4XfxVon2CPW9R0phn95aSEBwezrkbh7ZFc94P+EPh3ww73V4RrN6wI866iGxB/spyM+5yfpXyFHKMdhcVH2Lcle7m5JJq1mnFJ3btvprrve/szxlCrSfOknayVrv1T6eny7HaarpGma7pb6fq1lDeWsnJjlXIz2I9D7jmvMvEvwQ0jxHCsU8+na1aRZSK28RWCX/kjptSfKyqB0xu4r06x0nTtMili0+1S3jlO5o4yQucY4GcL+GKoeG9Al0LT7q3m1CS7eed5vMbOUDfwjJPTnnv1OTmvoa+DjXqRlOGtneSk012V1ZtPtseZGpywcb3XZpNfc7o8VsP2XvCNve+dF4Q8AW7qf8AWDT7m62n/rnLOU/Ag16lofw50TTZreW/nfVp7PH2eOZEjt7X/rlbxgRp9cZ96XwXbeJodc1qTXJLkW0k2+181Ix5wOV8xtoyrYRfl4ABB6njX0zw++neKtV1lr+SZb7bstzu2wbeuMk5z1PHHQcVx4XCQqxhUlSbu3pKV7WvZ2u1ulbrrcuTVFyjBpafZSV/K9ky3rmsWug6Bc6pdn5IYy6xg/NKwHCqO5JwB9a8YuF+ImueEdV1zWri7ja+T7Pb2Nvkx2UDEGSRo0ySxUbFByx3E8dR7DceFvD12Ln7Xo9pctc7vNedPMZs9fmOSPwxjtXB2XwTsdL8Tf2lpXifV7C23ZEFs2xwP7vmA8j6jPvXLnWEx2JnFQjeFmmlK1r6czutbLZX0Z04GtQpRfM7S03V9ui7GX8O5vFmo6jp9jpuiJovhvTV2farq1/0icckgM38TkknaMKCec4r2ekVdqBQScDGScmlr18swDwNH2Tm5Pu/wSWySOTFYj28+ZRt/XV9Qooor0TmCiiigAooooAKKKKACiiigAooooAKKKKAMnW/Eui+HbZp9WvPJRIzK21GkKoCAWIUEgZIGT3OKuWuo2V5d3lra3Cyy2cohuAv/LNyivtJ9drKfxFcf400wa9aa5pWj28lxqc1kqTLKGWL92HeFNxGMs8gyQTwDnpXPS6R8QLJtaj0eC8h826ursSRPEpuXbcAQSepVYQucAbnz90VzSrTjK1rryNlCLW+p6Xea3pOn3UdveX8EUkjbcMw+X5GfLf3RtRjk4HFTxahaT6lc2EUu64tgjSpg/LvBK89Oinj/GvL9S0vx8dbnuU0+8vWhkLW0plgAIZ7fcnJB27PPTkdCce9WNPinbT3F1baJfCeecXMjmW3PmHyigDLv6AohCAgfOwzxmpeIknrF/cHsk1uet219a3k1zHby72tpfIl4I2vtVse/DL0qxkV5pb2Hjiz8HQW9lb3ltqEz391NI0kUj+f5hNuJCTgoV6467VHGan0C1+IEXi+3m1S4v30tfM/cySREkBHKeYRzuPmIDj+KM9qtVnonFidNa2Z3Darpyz2sQu43a6keKHyzuDMgYuMjgY2NnPcY61ZlmiggeeeVI4o1Lu7sFVVHJJJ6D3rx630/wCJ91f6bJdWN5aNFGLdrovA5hWTyjJIFVhmTIcFu24/3eXvpXxLuDm+XVrh4t0sBW4gUIzqqhSMgNtSaUHIwTHx1qFiZfyv7h+yX8yPWEv7WTU5LCOXdPHEk7KAcBHLBTnpyUb8qIL+1ub26tIZC0tqypMNpAUsoYDPQ8EHj1ryNU+KyX8+oxaFerdTvDM4FxAFYIqnyfv8RgtKu0dd2Scjnagg8V2+jW6Ga8s9Wv8AW2e53vG7m3MbR+YQMgAKiMAOhUDp1axDf2X9wOkl1PQDqVoNZGlh2a58vzSFQkIO249ATg4B64NW68su08ZN4r1DVvDdveTW9xeyRyhZkC7YTDGFAc8EmKYZHaQnqKj0vSfiFD9k0WN9VstPTyI/tTTxM6qBD5pJ5PISbHX5pT2UU1iHe3Kw9ku56vRXM+CIvE8Xh9v+Eqmd7tnXAkKlhiNA/wB3jBk8wgf3dtdNW8ZcyvYykrOwUUUVQgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAqu9jZSXbXT2cDTtF5DSmMFzHnOwtjO3JJx0qxRRYCK2treztI7W1gjhhjUKkca7VUDsBUtFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH/9k="
-           alt="Sitios Hidalgo A.C."
-           style="width:120px;height:120px;object-fit:contain;
-                  border-radius:50%;margin-bottom:10px;
-                  filter:drop-shadow(0 0 14px rgba(245,158,11,0.35));" />
-      <div class="login-title">Sitios Hidalgo A.C.</div>
-      <div class="login-sub">Base Central · Nochixtlán, Oaxaca</div>
-    </div>
-    <div class="login-divider"></div>
-    <div class="form-field">
-      <label class="form-label">Correo electrónico</label>
-      <input id="emailInput" class="form-input" type="email"
-             placeholder="operadora@sitios-hidalgo.com" autocomplete="username" />
-    </div>
-    <div class="form-field">
-      <label class="form-label">Contraseña</label>
-      <input id="passInput" class="form-input" type="password"
-             placeholder="••••••••" autocomplete="current-password" />
-    </div>
-    <button id="loginBtn">Acceder al Panel</button>
-    <div id="loginError"></div>
-    <div id="setupWarning">
-      ⚠️ <strong>Configuración requerida:</strong> Reemplaza 1:140903781731:web:2178219a57a3244db42f56 en el código
-      con el appId de tu proyecto Firebase antes de desplegar.
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     MAIN APP
-══════════════════════════════════════ -->
-<div id="app">
-
-  <!-- HEADER -->
-  <header>
-    <div class="hdr-brand">
-      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAkACQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD7KrM1PXtF0wuL7VLWB0UsyNIC4AGSdo56c9K0XUOhU9CMGvOvHbaL4E0Cz/svT4Vvry5SzjuXVZJVyCWcs/UhQevGT+Bmc4U4uU9iJz5IuT2R1Wm+L/DGovss9cspGyBtMm089ODjrW4CCMg5B714d4G18Q69YaT4l1Oz19tQuvLhb7OGSIsu5drMAQwPYZ4IJwevsmj6ZZ6XA8NiGSB33hC24LwBgZ5xwOO3alCtTqX5HsVf3mr3t/w/UvUUUVYwrzL4uadqWoWE0WlySC/tLoXaxqiu89uyBXCK2dxBXOMH7vvXptZlza3st4kxh06QRsfKZ0beoI9fWuXF0XWhyp2Lg0nqeA/DzStRl8ax6lC8tjodteSX9/5seEZztKqrt/EXU/KO3XGOfoXRRINLgMoKuy7yp6jcScfhmqktnfSkLNb6bKgbeocO2GHQ8+9aVt5/lD7T5Xmd/Lzj9azwuGnSk3J3/r+vxLq1FNEtFFFdxiFFFFABRRRQAUUUUAf/2Q=="
-           alt="SHA"
-           style="width:36px;height:36px;object-fit:contain;border-radius:50%;
-                  filter:drop-shadow(0 0 4px rgba(245,158,11,0.4));" />
-      <div>
-        <div class="hdr-name">Sitios Hidalgo A.C.</div>
-        <div class="hdr-sub">Base Central · Nochixtlán, Oaxaca</div>
-      </div>
-    </div>
-
-    <div class="hdr-sep"></div>
-
-    <div class="conn-badge">
-      <div class="conn-dot" id="connDot"></div>
-      <span id="connText">Conectando...</span>
-    </div>
-
-    <div class="hdr-space"></div>
-
-    <div class="hdr-clock" id="clock">--:--:--</div>
-
-    <div class="hdr-user" id="hdrUser">
-      <span id="hdrEmail">—</span>
-      <span class="hdr-role" id="hdrRole">Operadora</span>
-    </div>
-
-    <button class="cal-tab-btn" id="calTabBtn" onclick="toggleCalView()">
-      ⭐ CALIF <span class="cal-badge" id="calBadge">0</span>
-    </button>
-    <button class="hbtn hbtn-fds" id="fdsBtn" onclick="toggleFDS()">
-      ⚠ FDS
-    </button>
-    <button class="hbtn hbtn-logout" onclick="doLogout()">
-      ✕ Salir
-    </button>
-  </header>
-
-  <!-- BODY -->
-  <div class="app-body">
-
-    <!-- ══ LEFT PANEL ══ -->
-    <div id="leftPanel">
-
-      <!-- FLEET STATS -->
-      <div class="ps">
-        <div class="ps-title">Estado de la Flota</div>
-        <div class="stat-grid">
-          <div class="stat-card sc-total">
-            <div class="stat-val" id="stTotal">0</div>
-            <div class="stat-lbl">En línea</div>
-          </div>
-          <div class="stat-card sc-libre">
-            <div class="stat-val" id="stLibre">0</div>
-            <div class="stat-lbl">Disponibles</div>
-          </div>
-          <div class="stat-card sc-ocup">
-            <div class="stat-val" id="stOcup">0</div>
-            <div class="stat-lbl">En servicio</div>
-          </div>
-          <div class="stat-card sc-sos" id="sosStat">
-            <div class="stat-val" id="stSOS">0</div>
-            <div class="stat-lbl">Alertas SOS</div>
-          </div>
-          <div class="stat-card sc-offline" id="offlineStat" onclick="toggleOfflinePanel()" style="cursor:pointer;border-color:rgba(100,116,139,0.4);">
-            <div class="stat-val" id="stOffline">0</div>
-            <div class="stat-lbl">Sin señal</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- BASES COUNT -->
-      <div class="ps">
-        <div class="ps-title">Unidades por Base</div>
-        <div id="basesList"></div>
-      </div>
-
-      <!-- UNITS LIST -->
-      <div class="units-header">
-        <div class="ps-title" style="margin-bottom:0">Unidades Activas</div>
-        <div id="lastUpdate">—</div>
-      </div>
-      <div id="unitsList">
-        <div class="u-empty">Sin unidades conectadas</div>
-      </div>
-
-      <!-- ── PANEL CONDUCTORES SIN SEÑAL ── -->
-      <div id="offlinePanel" style="display:none;margin-top:8px;">
-        <div class="ps" style="background:rgba(75,85,99,0.15);border:1px solid rgba(75,85,99,0.3);border-radius:12px;padding:10px;">
-          <div class="ps-title" style="color:var(--gray);display:flex;justify-content:space-between;align-items:center;">
-            📵 Sin señal GPS
-            <button onclick="toggleOfflinePanel()" style="background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;">✕</button>
-          </div>
-          <div id="offlineList" style="max-height:200px;overflow-y:auto;">
-            <div style="font-size:11px;color:var(--text-dim);padding:6px 0;">Sin datos aún</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ PANEL CALIFICACIONES (se muestra al activar el tab) ══ -->
-    <div id="calView">
-      <!-- Stats del día -->
-      <div class="ps-cal">
-        <div class="ps-title">Resumen de hoy</div>
-        <div class="cal-stats-row">
-          <div class="cal-stat"><span class="cal-stat-n azul" id="calStatTotal">0</span><span class="cal-stat-l">Califics.</span></div>
-          <div class="cal-stat"><span class="cal-stat-n rojo"  id="calStatAlertas">0</span><span class="cal-stat-l">Alertas</span></div>
-          <div class="cal-stat"><span class="cal-stat-n verde" id="calStatExcel">0</span><span class="cal-stat-l">Excelent.</span></div>
-        </div>
-      </div>
-
-      <!-- Alertas activas -->
-      <div class="ps-cal" style="flex:0 0 auto">
-        <div class="ps-title">🚨 Alertas activas</div>
-        <div id="calAlertasContainer">
-          <div class="cal-ok">✅ Sin alertas activas</div>
-        </div>
-      </div>
-
-      <!-- Ranking -->
-      <div class="ps-cal" style="flex:1;overflow-y:auto">
-        <div class="ps-title">🏆 Rendimiento conductores</div>
-        <div id="calRankingContainer">
-          <div style="font-size:11px;color:var(--text-dim);text-align:center;padding:10px">Sin datos aún</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ MAP AREA ══ -->
-    <div id="mapWrap">
-      <div id="fdsBanner">⚠ SISTEMA FUERA DE SERVICIO — Unidades en espera</div>
-      <div id="map"></div>
-
-      <div class="map-bar">
-        Unidades: <b id="mapCount">0</b> &nbsp;|&nbsp;
-        Nochixtlán, Oaxaca &nbsp;|&nbsp;
-        GPS activo
-      </div>
-
-      <div class="map-legend">
-        <div class="leg-title">Estado</div>
-        <div class="leg-row"><div class="leg-dot" style="background:#10b981"></div>Disponible</div>
-        <div class="leg-row"><div class="leg-dot" style="background:#f97316"></div>En servicio</div>
-        <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div>SOS 🆘</div>
-        <div class="leg-row"><div class="leg-dot" style="background:#4b5563"></div>Sin señal</div>
-        <div class="leg-row"><div class="leg-sq"  style="background:#3b82f6"></div>Base</div>
-      </div>
-    </div>
-
-  </div><!-- /app-body -->
-</div><!-- /app -->
-
-<!-- SOS MODAL -->
-<div id="sosModal">
-  <div class="sos-card">
-    <span class="sos-beacon">🆘</span>
-    <div class="sos-head">¡Alerta de Emergencia!</div>
-    <div class="sos-unit-id" id="sosUnitId">—</div>
-    <div class="sos-lat-lng" id="sosLatLng">—</div>
-    <div class="sos-ts" id="sosTsEl">—</div>
-    <button class="sos-dismiss" onclick="dismissSOS()">✓ Alerta Atendida — Cerrar</button>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════
-     FIREBASE COMPAT SDK v10
-════════════════════════════════════════ -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHidalgo Kué'in — Base Central v4.0</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Firebase compat v10 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-<!-- LEAFLET -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
-<script>
-/* ================================================================
-   SITIOS HIDALGO A.C. — APP BASE v5.0
-   Arquitectura: Centralized State · Firebase Compat · Leaflet 1.9
-   Producción: sitiohidalgobase.netlify.app
-   ================================================================
-
-   ⚠️ ACCIÓN REQUERIDA ANTES DE DESPLEGAR:
-   1) Busca tu appId:
-      Firebase Console → sitios-hidalgo-gps → ⚙ Configuración
-      del proyecto → Tus apps → SDK setup and configuration
-   2) Reemplaza "1:140903781731:web:2178219a57a3244db42f56" en FIREBASE_CONFIG.appId
-   3) Agrega sitiohidalgobase.netlify.app en Firebase Auth →
-      Settings → Dominios autorizados
-================================================================ */
-
-'use strict';
-
-/* ────────────────────────────────────────
-   🔑  CONFIGURACIÓN FIREBASE
-──────────────────────────────────────── */
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyDEu6dOk9mUqXp52lyY6vBEm4GAsgU0ESU",
-  authDomain:        "sitios-hidalgo-gps.firebaseapp.com",
-  databaseURL:       "https://sitios-hidalgo-gps-default-rtdb.firebaseio.com",
-  projectId:         "sitios-hidalgo-gps",
-  storageBucket:     "sitios-hidalgo-gps.appspot.com",
-  messagingSenderId: "140903781731",
-  appId:             "1:140903781731:web:2178219a57a3244db42f56"
-};
-
-const APP_ID_CONFIGURED = true; // appId configurado correctamente
-
-/* ────────────────────────────────────────
-   📍  BASES — Nochixtlán, Oaxaca
-   Ajustar coordenadas con CALIBRAR_GEOCERCAS.html
-──────────────────────────────────────── */
-// ═══════════════════════════════════════════════════════
-// GEOCERCAS — SITIOS HIDALGO A.C.
-// Calibradas en campo con SW Maps — precisión 1.4 – 3 m
-// Fecha de calibración: 21/03/2026  |  7/7 bases ✅
-// ═══════════════════════════════════════════════════════
-const BASES = {
-  B1: { nombre: "Centro",                   lat: 17.459468, lng: -97.225268, radio:  80 },
-  B2: { nombre: "Turístico",                lat: 17.460197, lng: -97.229843, radio:  80 },
-  B3: { nombre: "Terminal Sur",             lat: 17.460377, lng: -97.231048, radio: 100 },
-  B4: { nombre: "Porfirio Díaz / Alcalá",   lat: 17.458817, lng: -97.222210, radio:  80 },
-  B5: { nombre: "Porfirio Díaz / 5 de Feb", lat: 17.459680, lng: -97.227145, radio:  80 },
-  B6: { nombre: "Hospital",                 lat: 17.450427, lng: -97.225592, radio: 100 },
-  B7: { nombre: "Fresno",                   lat: 17.453626, lng: -97.230098, radio:  80 }
-};
-
-/* ────────────────────────────────────────
-   ⚙️  CONSTANTES
-──────────────────────────────────────── */
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;  // 5 min sin señal = offline
-const UI_REFRESH_MS        = 30 * 1000;       // re-render cada 30s (timeouts)
-
-const STATUS_COLOR = {
-  LIBRE:             '#10b981',  // verde
-  OCUPADO:           '#f97316',  // naranja
-  EN_VIAJE:          '#f97316',  // naranja (mismo que OCUPADO)
-  FUERA_SERVICIO:    '#4b5563',  // gris
-  FUERA_DE_SERVICIO: '#4b5563',  // gris
-  OFFLINE:           '#4b5563',  // gris (nuevo estado en MAYÚSCULAS)
-  DESCANSO:          '#2979ff',  // azul (nuevo estado)
-  SOS:               '#ef4444'   // rojo
-};
-
-/* ────────────────────────────────────────
-   🗂️  ESTADO GLOBAL — fuente única de verdad
-──────────────────────────────────────── */
-const S = {
-  user:        null,
-  role:        'operadora',
-  unidades:    {},   // { [unitId]: { lat, lng, estado, hora_gps, velocidad, ... } }
-  sosActivos:  {},   // { [unitId]: { timestamp, lat, lng } }
-  fdsActivo:   false,
-  map:         null,
-  markers:     {},   // { [unitId]: L.Marker }
-  rtdbRefs:    []    // refs para limpiar en logout
-};
-
-/* ────────────────────────────────────────
-   🔥  FIREBASE — INIT
-──────────────────────────────────────── */
-let auth, rtdb, db;
-
-(function initFirebase() {
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    auth = firebase.auth();
-    rtdb = firebase.database();
-    db   = firebase.firestore();
-    console.log('[Firebase] ✅ Inicializado');
-  } catch (err) {
-    console.error('[Firebase] ❌ Error:', err);
-    // Intentar sin appId como fallback
-    try {
-      if (!firebase.apps.length) {
-        const cfg = { ...FIREBASE_CONFIG };
-        delete cfg.appId;
-        firebase.initializeApp(cfg);
-        auth = firebase.auth();
-        rtdb = firebase.database();
-        db   = firebase.firestore();
-        console.warn('[Firebase] ⚠️ Inicializado sin appId');
-      }
-    } catch (err2) {
-      console.error('[Firebase] ❌ Error crítico:', err2);
-    }
-  }
-
-  // Mostrar aviso si appId no está configurado
-  if (!APP_ID_CONFIGURED) {
-    document.getElementById('setupWarning').style.display = 'block';
-  }
-})();
-
-/* ────────────────────────────────────────
-   🔐  AUTENTICACIÓN
-──────────────────────────────────────── */
-
-// Acceso permitido para cualquier usuario autenticado de Firebase
-async function verifyAccess(user) {
-  S.role = 'operadora';
-  showApp();
-  // Iniciar sistema de calificaciones en tiempo real
-  if (typeof iniciarSistemaCalificaciones === 'function') iniciarSistemaCalificaciones();
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS — TACTICAL DARK THEME
+═══════════════════════════════════════════ */
+:root {
+  --bg0: #0a0c10;
+  --bg1: #0f1117;
+  --bg2: #141720;
+  --bg3: #1c2030;
+  --bg4: #242840;
+  --border: rgba(100,120,200,0.15);
+  --border-hi: rgba(100,150,255,0.35);
+  --text0: #e8eaf6;
+  --text1: #9ba0bc;
+  --text2: #5a6080;
+  --accent: #4f8ef7;
+  --accent2: #7c5af7;
+  --green: #2dd4a0;
+  --red: #f04060;
+  --amber: #f59e0b;
+  --cyan: #22d3ee;
+  --purple: #a78bfa;
+  --font: 'JetBrains Mono', 'Courier New', monospace;
+  --font-ui: system-ui, -apple-system, sans-serif;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.6);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.8);
+  --glow-green: 0 0 20px rgba(45,212,160,0.3);
+  --glow-red: 0 0 20px rgba(240,64,96,0.3);
+  --glow-blue: 0 0 20px rgba(79,142,247,0.3);
+  --transition: 0.2s ease;
 }
 
-auth && auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    S.user = user;
-    await verifyAccess(user);   // ← verifica claims ANTES de mostrar la app
-  } else {
-    S.user = null;
-    tearDown();
-    showLogin();
-  }
-});
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-function doLogin() {
-  const email = document.getElementById('emailInput').value.trim();
-  const pass  = document.getElementById('passInput').value;
-  const errEl = document.getElementById('loginError');
-  const btn   = document.getElementById('loginBtn');
-
-  errEl.textContent = '';
-  if (!email || !pass) { errEl.textContent = 'Ingresa correo y contraseña.'; return; }
-  if (!auth) { errEl.textContent = 'Firebase no inicializado. Verifica la configuración.'; return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Verificando...';
-
-  auth.signInWithEmailAndPassword(email, pass)
-    .catch(err => {
-      const msgs = {
-        'auth/user-not-found':     'Usuario no registrado.',
-        'auth/wrong-password':     'Contraseña incorrecta.',
-        'auth/invalid-credential': 'Credenciales inválidas.',
-        'auth/invalid-email':      'Formato de correo inválido.',
-        'auth/too-many-requests':  'Demasiados intentos. Espera un momento.',
-        'auth/network-request-failed': 'Sin conexión. Verifica tu internet.',
-        'auth/unauthorized-domain': '⚠️ Dominio no autorizado en Firebase Auth. Agrégalo en la consola.'
-      };
-      errEl.textContent = msgs[err.code] || `Error: ${err.message}`;
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = 'Acceder al Panel';
-    });
+html, body {
+  height: 100%;
+  background: var(--bg0);
+  color: var(--text0);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  overflow: hidden;
 }
 
-async function doLogout() {
-  if (!confirm('¿Cerrar sesión del panel?')) return;
-  tearDown();
-  if (auth) await auth.signOut();
+/* ═══════════════════════════════════════════
+   LAYOUT GRID
+═══════════════════════════════════════════ */
+#app {
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: 300px 1fr 280px;
+  height: 100vh;
+  gap: 0;
 }
 
-/* ────────────────────────────────────────
-   🗺️  MAPA LEAFLET
-──────────────────────────────────────── */
-function initMap() {
-  if (S.map) return;
-
-  S.map = L.map('map', {
-    center:          [17.4575, -97.2273],  // centroide real de las 7 bases calibradas
-    zoom:            14,                   // zoom 14 = cubre ~3km, todas las bases entran
-    zoomControl:     true,
-    attributionControl: true
-  });
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
-  }).addTo(S.map);
-
-  drawBases();
-  console.log('[Mapa] ✅ Inicializado — Nochixtlán');
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+#topbar {
+  grid-column: 1 / -1;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  position: relative;
+  z-index: 1000;
 }
 
-function drawBases() {
-  Object.entries(BASES).forEach(([id, b]) => {
-    // Geocerca
-    L.circle([b.lat, b.lng], {
-      radius:      b.radio,
-      color:       '#3b82f6',
-      fillColor:   '#3b82f6',
-      fillOpacity: 0.06,
-      weight:      1.5,
-      dashArray:   '5 5'
-    }).addTo(S.map);
-
-    // Pin de base
-    const icon = L.divIcon({
-      html: `<div style="
-        background:#1e3a5f; color:#60a5fa;
-        border:1px solid #3b82f6; border-radius:4px;
-        padding:2px 6px; font-size:10px; font-weight:700;
-        font-family:'JetBrains Mono',monospace;
-        box-shadow:0 2px 8px rgba(0,0,0,0.5);
-        white-space:nowrap;
-      ">${id}</div>`,
-      className:  '',
-      iconAnchor: [14, 10]
-    });
-
-    L.marker([b.lat, b.lng], { icon })
-      .addTo(S.map)
-      .bindPopup(`<b style="font-family:monospace">${id}</b> — ${b.nombre}<br>
-                  Radio: ${b.radio}m<br>
-                  <small>${b.lat.toFixed(5)}, ${b.lng.toFixed(5)}</small>`);
-  });
+#topbar .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
-/* ────────────────────────────────────────
-   📐  HAVERSINE (metros entre 2 puntos)
-──────────────────────────────────────── */
-function haversine(lat1, lng1, lat2, lng2) {
-  const R  = 6371000;
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const dφ = (lat2 - lat1) * Math.PI / 180;
-  const dλ = (lng2 - lng1) * Math.PI / 180;
-  const a  = Math.sin(dφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+#topbar .logo svg { width: 28px; height: 28px; }
+
+.logo-badge {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
 
-/**
- * Retorna el ID de la base si la unidad está dentro de su geocerca.
- * Retorna null si no está en ninguna base.
- */
-function calcBase(lat, lng) {
-  let found = null, minDist = Infinity;
-  Object.entries(BASES).forEach(([id, b]) => {
-    const d = haversine(lat, lng, b.lat, b.lng);
-    if (d <= b.radio && d < minDist) { minDist = d; found = id; }
-  });
-  return found;
+#topbar .divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
 }
 
-/* ────────────────────────────────────────
-   🚕  MARCADORES DE UNIDADES
-──────────────────────────────────────── */
-function unitColor(unitId, data) {
-  if (S.sosActivos[unitId]) return STATUS_COLOR.sos;
-  const offline = (Date.now() - (data.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
-  if (offline) return STATUS_COLOR.sin_senal;
-  return STATUS_COLOR[data.estado] || STATUS_COLOR.libre;
+/* Firebase status */
+#firebase-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
 }
 
-function buildUnitIcon(unitId, data) {
-  const color  = unitColor(unitId, data);
-  const isSOS  = !!S.sosActivos[unitId];
-  const numId  = (unitId || '').replace(/[^0-9]/g, '') || unitId;
-  const pulse  = isSOS ? 'animation:sosPulse 1.4s ease-out infinite;' : '';
+#firebase-status .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text2);
+  transition: background var(--transition), box-shadow var(--transition);
+  flex-shrink: 0;
+}
+#firebase-status.online .dot { background: var(--green); box-shadow: var(--glow-green); }
+#firebase-status.offline .dot { background: var(--red); box-shadow: var(--glow-red); }
+#firebase-status.online .label { color: var(--green); }
+#firebase-status.offline .label { color: var(--red); }
 
-  return L.divIcon({
-    html: `<div style="
-      width:30px; height:30px; border-radius:50%;
-      background:${color}; color:#fff;
-      display:flex; align-items:center; justify-content:center;
-      font-size:10px; font-weight:700;
-      font-family:'JetBrains Mono',monospace;
-      border:2px solid rgba(255,255,255,0.7);
-      box-shadow:0 2px 10px rgba(0,0,0,0.5);
-      ${pulse}
-    ">${numId}</div>`,
-    className:  '',
-    iconSize:   [30, 30],
-    iconAnchor: [15, 15]
-  });
+#topbar .spacer { flex: 1; }
+
+/* Clock */
+#clock {
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text1);
+  letter-spacing: 0.06em;
+  min-width: 80px;
+  text-align: right;
 }
 
-function buildPopup(unitId, data) {
-  const offline = (Date.now() - (data.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
-  const base    = (!offline && data.lat && data.lng) ? calcBase(data.lat, data.lng) : null;
-  const vel     = data.velocidad != null ? `${Math.round(data.velocidad)} km/h` : '—';
-  const ts      = data.hora_gps  ? new Date(data.hora_gps).toLocaleTimeString('es-MX') : '—';
-  return `
-    <div style="font-family:'Rajdhani',sans-serif;min-width:140px">
-      <b style="font-family:'JetBrains Mono',monospace;font-size:14px">${unitId}</b><br>
-      Estado: <b>${offline ? 'Sin señal' : (data.status || 'LIBRE')}</b><br>
-      Velocidad: ${vel}<br>
-      ${base ? `Base: <b>${base}</b><br>` : ''}
-      GPS: ${ts}
-      ${data.lat ? `<br><small style="color:#64748b">${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</small>` : ''}
-    </div>`;
+/* SOS Banner */
+#sos-banner {
+  display: none;
+  position: fixed;
+  top: 56px;
+  left: 0; right: 0;
+  z-index: 9999;
+  background: linear-gradient(90deg, rgba(240,64,96,0.95), rgba(200,20,60,0.95));
+  color: white;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  animation: sos-pulse 1s ease-in-out infinite;
+  cursor: pointer;
+}
+#sos-banner.active { display: flex; }
+
+@keyframes sos-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
 }
 
-function upsertMarker(unitId, data) {
-  if (!S.map || !data.lat || !data.lng) return;
+#sos-banner svg { width: 20px; height: 20px; animation: spin 2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  const ll   = [data.lat, data.lng];
-  const icon = buildUnitIcon(unitId, data);
-  const pop  = buildPopup(unitId, data);
-
-  if (S.markers[unitId]) {
-    // Guard de posición: solo mover el marcador si realmente cambió (ahorra CPU)
-    const old = S.markers[unitId].getLatLng();
-    if (old.lat !== data.lat || old.lng !== data.lng) {
-      S.markers[unitId].setLatLng(ll);
-    }
-    S.markers[unitId].setIcon(icon).setPopupContent(pop);
-  } else {
-    S.markers[unitId] = L.marker(ll, { icon })
-      .addTo(S.map)
-      .bindPopup(pop)
-      .on('click', () => focusUnit(unitId));  // ← onclick preservado
-  }
+/* Login screen */
+#login-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
 }
 
-function removeMarker(unitId) {
-  if (S.markers[unitId]) {
-    S.map?.removeLayer(S.markers[unitId]);
-    delete S.markers[unitId];
-  }
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 360px;
+  box-shadow: var(--shadow-lg);
 }
 
-function focusUnit(unitId) {
-  const d = S.unidades[unitId];
-  if (d?.lat && d?.lng) {
-    S.map.flyTo([d.lat, d.lng], 17, { duration: 0.7 });
-    S.markers[unitId]?.openPopup();
-  }
+.login-card h1 {
+  font-family: var(--font);
+  font-size: 18px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+.login-card p { color: var(--text2); font-size: 12px; margin-bottom: 28px; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.field input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--text0);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition);
+  font-family: var(--font);
+}
+.field input:focus { border-color: var(--accent); }
+
+.btn-login {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity var(--transition);
+  letter-spacing: 0.04em;
+}
+.btn-login:hover { opacity: 0.9; }
+.btn-login:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#login-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 10px;
+  min-height: 18px;
+  text-align: center;
 }
 
-function focusBase(id) {
-  const b = BASES[id];
-  if (b && S.map) S.map.flyTo([b.lat, b.lng], 16, { duration: 0.6 });
+/* ═══════════════════════════════════════════
+   LEFT PANEL — CONTROL
+═══════════════════════════════════════════ */
+#left-panel {
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ────────────────────────────────────────
-   🔥  RTDB LISTENERS
-──────────────────────────────────────── */
-function startListeners() {
-  listenUnidades();
-  listenSOS();
-  listenFDS();
-  listenConnection();
+#left-panel::-webkit-scrollbar { width: 4px; }
+#left-panel::-webkit-scrollbar-track { background: transparent; }
+#left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.panel-section {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
 }
 
-/* — Unidades en tiempo real — */
-function listenUnidades() {
-  const ref = rtdb.ref('unidades');
-
-  ref.on('value', snap => {
-    const fresh = snap.val() || {};
-
-    // ⭐ NUEVO: Logs de rastreo
-    console.log('🚖 Conductores recibidos desde Firebase:', fresh);
-    console.log('🔍 Total de unidades:', Object.keys(fresh).length);
-
-    // Eliminar unidades que ya no existen
-    Object.keys(S.unidades).forEach(uid => {
-      if (!fresh[uid]) { removeMarker(uid); delete S.unidades[uid]; }
-    });
-
-    // Agregar / actualizar
-    Object.entries(fresh).forEach(([uid, val]) => {
-      if (typeof val !== 'object' || !val) return;
-      S.unidades[uid] = { ...val, unitId: uid };
-      upsertMarker(uid, S.unidades[uid]);
-    });
-
-    // ⭐ NUEVO: Logs de estados
-    const lib = Object.values(fresh).filter(u => u.status === 'LIBRE' && u.online !== false);
-    const ocp = Object.values(fresh).filter(u => u.status === 'OCUPADO');
-    console.log('✅ Taxis LIBRES:', lib.length, lib);
-    console.log('🔴 Taxis OCUPADOS:', ocp.length);
-
-    renderPanel();
-  }, err => {
-    console.error('[RTDB:unidades]', err);
-    setConn(false);
-  });
-
-  S.rtdbRefs.push({ ref, ev: 'value' });
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* — SOS — */
-function listenSOS() {
-  const ref = rtdb.ref('alertas_sos');
-
-  // Primero carga los SOS existentes SIN mostrar modal (solo marcarlos en estado)
-  ref.once('value', snap => {
-    const existing = snap.val() || {};
-    Object.entries(existing).forEach(([uid, data]) => {
-      if (!data) return;
-      S.sosActivos[uid] = { timestamp: data.timestamp || Date.now(), lat: data.lat, lng: data.lng };
-      if (S.unidades[uid]) upsertMarker(uid, S.unidades[uid]);
-    });
-    renderPanel();
-
-    // DESPUÉS suscribe a NUEVOS SOS (solo los que lleguen a partir de ahora)
-    ref.on('child_added', snap => {
-      const uid  = snap.key;
-      const data = snap.val() || {};
-      const isNew = !S.sosActivos[uid];  // solo mostrar modal si es realmente nuevo
-      S.sosActivos[uid] = { timestamp: data.timestamp || Date.now(), lat: data.lat, lng: data.lng };
-      if (isNew) showSOSModal(uid);
-      if (S.unidades[uid]) upsertMarker(uid, S.unidades[uid]);
-      renderPanel();
-    });
-  });
-
-  ref.on('child_removed', snap => {
-    const uid = snap.key;
-    delete S.sosActivos[uid];
-    if (S.unidades[uid]) upsertMarker(uid, S.unidades[uid]);
-    renderPanel();
-  });
-
-  S.rtdbRefs.push({ ref, ev: 'child_added' });
-  S.rtdbRefs.push({ ref, ev: 'child_removed' });
+.section-title .count-badge {
+  background: var(--bg3);
+  color: var(--text1);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
 }
 
-/* — Fuera de Servicio — */
-function listenFDS() {
-  const ref = rtdb.ref('sistema/fuera_de_servicio');
-  ref.on('value', snap => {
-    S.fdsActivo = !!snap.val();
-    updateFDSUI(S.fdsActivo);
-  });
-  S.rtdbRefs.push({ ref, ev: 'value' });
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
-/* — Estado de conexión RTDB — */
-function listenConnection() {
-  const ref = rtdb.ref('.info/connected');
-  ref.on('value', snap => setConn(!!snap.val()));
-  S.rtdbRefs.push({ ref, ev: 'value' });
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  transition: border-color var(--transition);
+}
+.stat-card:hover { border-color: var(--border-hi); }
+
+.stat-value {
+  font-family: var(--font);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--text0);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.3;
 }
 
-/* ────────────────────────────────────────
-   ⚠️  FUERA DE SERVICIO (FDS)
-──────────────────────────────────────── */
-async function toggleFDS() {
-  if (!S.user || !rtdb) return;
-  try {
-    await rtdb.ref('sistema/fuera_de_servicio').set(!S.fdsActivo);
-  } catch (err) {
-    console.error('[FDS]', err);
-    alert('Error al cambiar FDS: ' + err.message);
-  }
+.stat-card.active .stat-value { color: var(--green); text-shadow: var(--glow-green); }
+.stat-card.idle .stat-value { color: var(--amber); }
+.stat-card.offline .stat-value { color: var(--red); }
+.stat-card.sos .stat-value { color: var(--red); text-shadow: var(--glow-red); }
+
+/* Filter tabs */
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  padding: 3px;
+  margin-bottom: 10px;
 }
 
-function updateFDSUI(activo) {
-  const btn    = document.getElementById('fdsBtn');
-  const banner = document.getElementById('fdsBanner');
-  btn.classList.toggle('active', activo);
-  btn.textContent = activo ? '✓ Servicio Activo' : '⚠ FDS';
-  banner.style.display = activo ? 'block' : 'none';
+.filter-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 11px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.filter-tab:hover { color: var(--text0); background: var(--bg3); }
+.filter-tab.active { background: var(--bg4); color: var(--text0); font-weight: 600; }
+
+/* Unit list */
+#unit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* ────────────────────────────────────────
-   🎛️  PANEL — RENDER
-──────────────────────────────────────── */
-function renderPanel() {
-  const now = Date.now();
-  let total = 0, libre = 0, ocup = 0, sinSenal = 0;
-  const bCounts = {};
-  Object.keys(BASES).forEach(b => (bCounts[b] = 0));
-
-  Object.entries(S.unidades).forEach(([uid, d]) => {
-    total++;
-    const offline = (now - (d.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
-    if (offline)           sinSenal++;
-    else if (d.status === 'LIBRE')                       libre++;
-    else if (d.status === 'OCUPADO' || d.status === 'EN_VIAJE') ocup++;
-
-    if (!offline && d.lat && d.lng) {
-      const b = calcBase(d.lat, d.lng);
-      if (b) bCounts[b]++;
-    }
-  });
-
-  const sosCount = Object.keys(S.sosActivos).length;
-
-  // Stats
-  setText('stTotal', total);
-  setText('stLibre', libre);
-  setText('stOcup',  ocup);
-  setText('stSOS',   sosCount);
-  setText('mapCount', total);
-
-  const sosStat = document.getElementById('sosStat');
-  if (sosStat) sosStat.style.borderColor = sosCount > 0 ? 'var(--red)' : 'var(--border)';
-
-  // Offline count badge
-  setText('stOffline', sinSenal);
-  const offStat = document.getElementById('offlineStat');
-  if (offStat) offStat.style.borderColor = sinSenal > 0 ? 'rgba(100,116,139,0.8)' : 'rgba(100,116,139,0.2)';
-
-  // Actualizar lista offline
-  renderOfflineList(now);
-
-  // Bases
-  renderBases(bCounts);
-
-  // Unit list
-  renderUnits(now);
-
-  // Timestamp
-  document.getElementById('lastUpdate').textContent = fmtTime(now);
+.unit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
-function renderBases(counts) {
-  document.getElementById('basesList').innerHTML =
-    Object.entries(BASES).map(([id, b]) => {
-      const n = counts[id] || 0;
-      return `<div class="base-row" onclick="focusBase('${id}')">
-        <span class="base-id">${id}</span>
-        <span class="base-nm">${b.nombre}</span>
-        <span class="base-cnt ${n === 0 ? 'zero' : ''}">${n}</span>
-      </div>`;
-    }).join('');
+.unit-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
 }
 
-function renderUnits(now) {
-  const el = document.getElementById('unitsList');
-  const entries = Object.entries(S.unidades)
-    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+.unit-item.status-activo::before { background: var(--green); }
+.unit-item.status-libre::before { background: var(--amber); }
+.unit-item.status-fuera_servicio::before { background: var(--red); }
+.unit-item.status-sos::before { background: var(--red); animation: sos-stripe 0.5s ease-in-out infinite; }
+@keyframes sos-stripe { 50% { opacity: 0; } }
 
-  if (entries.length === 0) {
-    el.innerHTML = '<div class="u-empty">Sin unidades conectadas</div>';
-    return;
-  }
-
-  el.innerHTML = entries.map(([uid, d]) => {
-    const offline = (now - (d.hora_gps || 0)) > OFFLINE_THRESHOLD_MS;
-    const isSOS   = !!S.sosActivos[uid];
-    const color   = unitColor(uid, d);
-    const base    = (!offline && d.lat && d.lng) ? calcBase(d.lat, d.lng) : null;
-    const estado  = isSOS ? '🆘 SOS' : offline ? 'Sin señal' : (base || d.status || 'LIBRE');
-    const vel     = d.velocidad != null ? `${Math.round(d.velocidad)}km/h` : '—';
-    const ago     = d.hora_gps ? timeAgo(d.hora_gps) : '—';
-    const cls     = isSOS ? 'sos-item' : offline ? 'offline-item' : '';
-
-    return `<div class="unit-row ${cls}" onclick="focusUnit('${uid}')">
-      <div class="u-dot" style="background:${color}"></div>
-      <div style="flex:1;overflow:hidden">
-        <div class="u-id">${uid}</div>
-        <div class="u-estado">${estado}</div>
-      </div>
-      <div class="u-info">
-        <div class="u-vel">${vel}</div>
-        <div class="u-time">${ago}</div>
-      </div>
-    </div>`;
-  }).join('');
+.unit-item:hover {
+  border-color: var(--border-hi);
+  background: var(--bg3);
 }
 
-/* ────────────────────────────────────────
-   🆘  SOS MODAL
-──────────────────────────────────────── */
-let currentSOS = null;
-
-function showSOSModal(unitId) {
-  currentSOS = unitId;
-  const sos = S.sosActivos[unitId];
-  const ts  = new Date(sos?.timestamp || Date.now()).toLocaleTimeString('es-MX');
-  const ll  = (sos?.lat && sos?.lng)
-    ? `${sos.lat.toFixed(5)}, ${sos.lng.toFixed(5)}`
-    : 'Coordenadas no disponibles';
-
-  document.getElementById('sosUnitId').textContent  = unitId;
-  document.getElementById('sosLatLng').textContent  = ll;
-  document.getElementById('sosTsEl').textContent    = `Hora: ${ts}`;
-  document.getElementById('sosModal').classList.add('show');
-
-  // Zoom al marcador SOS si está en el mapa
-  if (S.unidades[unitId]?.lat) {
-    S.map?.flyTo([S.unidades[unitId].lat, S.unidades[unitId].lng], 17, { duration: 0.8 });
-  }
-
-  // Audio: triple beep
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 350, 700].forEach(delay => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 940;
-      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay/1000);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay/1000 + 0.28);
-      osc.start(ctx.currentTime + delay/1000);
-      osc.stop(ctx.currentTime + delay/1000 + 0.3);
-    });
-  } catch (_) {}
+.unit-id {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text0);
+  min-width: 38px;
 }
 
-async function dismissSOS() {
-  document.getElementById('sosModal').classList.remove('show');
-  if (currentSOS && rtdb) {
-    try {
-      await rtdb.ref(`alertas_sos/${currentSOS}`).remove();
-    } catch (_) {}
-  }
-  currentSOS = null;
+.unit-info {
+  flex: 1;
+  overflow: hidden;
 }
 
-/* ────────────────────────────────────────
-   🔌  CONEXIÓN
-──────────────────────────────────────── */
-function setConn(ok) {
-  const dot = document.getElementById('connDot');
-  const txt = document.getElementById('connText');
-  if (!dot) return;
-  dot.className = 'conn-dot' + (ok ? ' ok' : '');
-  txt.textContent = ok ? 'En línea' : 'Sin conexión';
+.unit-name {
+  font-size: 12px;
+  color: var(--text1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ────────────────────────────────────────
-   🖥️  NAVEGACIÓN ENTRE PANTALLAS
-──────────────────────────────────────── */
-function showApp() {
-  document.getElementById('loginOverlay').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('hdrEmail').textContent = S.user?.email || '—';
-  document.getElementById('hdrRole').textContent  = S.role;
-
-  // Inicializar mapa en el siguiente frame (el div debe estar visible)
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      initMap();
-      startListeners();
-      // Forzar redimensionamiento del mapa
-      S.map?.invalidateSize();
-    }, 100);
-  });
+.unit-time {
+  font-family: var(--font);
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 2px;
 }
 
-function showLogin() {
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('emailInput').value  = '';
-  document.getElementById('passInput').value   = '';
-  document.getElementById('loginError').textContent = '';
+.unit-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-activo .unit-status-dot { background: var(--green); box-shadow: var(--glow-green); }
+.status-libre .unit-status-dot { background: var(--amber); }
+.status-fuera_servicio .unit-status-dot { background: var(--red); }
+.status-sos .unit-status-dot { background: var(--red); animation: sos-pulse 0.5s ease-in-out infinite; box-shadow: var(--glow-red); }
+
+/* ═══════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════ */
+#map-container {
+  position: relative;
+  background: var(--bg0);
 }
 
-/* ────────────────────────────────────────
-   🧹  TEARDOWN — limpieza total en logout
-──────────────────────────────────────── */
-function tearDown() {
-  // Limpiar sistema de calificaciones
-  if (typeof destruirSistemaCalificaciones === 'function') destruirSistemaCalificaciones();
-  // Detach TODOS los listeners de cada ref registrada
-  // ref.off() sin argumentos desconecta absolutamente todos los callbacks
-  const refsVistas = new Set();
-  S.rtdbRefs.forEach(({ ref }) => {
-    try {
-      if (!refsVistas.has(ref.toString())) {
-        ref.off();
-        refsVistas.add(ref.toString());
-      }
-    } catch (_) {}
-  });
-  S.rtdbRefs.length = 0;
-
-  // Limpiar marcadores
-  Object.values(S.markers).forEach(m => { try { S.map?.removeLayer(m); } catch (_) {} });
-  S.markers = {};
-
-  // Reset estado
-  S.unidades   = {};
-  S.sosActivos = {};
-  S.fdsActivo  = false;
-
-  console.log('[Teardown] ✅ Listeners y estado limpiados');
+#map {
+  width: 100%;
+  height: 100%;
 }
 
-/* ────────────────────────────────────────
-   🕐  RELOJ
-──────────────────────────────────────── */
-(function startClock() {
-  const el = document.getElementById('clock');
-  const tick = () => {
-    if (el) el.textContent = new Date().toLocaleTimeString('es-MX', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    });
-  };
-  tick();
-  setInterval(tick, 1000);
-})();
-
-/* ────────────────────────────────────────
-   🔄  REFRESH PERIÓDICO (timeouts de señal)
-──────────────────────────────────────── */
-setInterval(() => {
-  if (!S.user || Object.keys(S.unidades).length === 0) return;
-  // Re-colorear marcadores (detectar unidades que perdieron señal)
-  Object.entries(S.unidades).forEach(([uid, d]) => upsertMarker(uid, d));
-  renderPanel();
-}, UI_REFRESH_MS);
-
-/* ────────────────────────────────────────
-   🛠️  UTILS
-──────────────────────────────────────── */
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
+/* Leaflet dark theme overrides */
+.leaflet-container {
+  background: #0a0c10;
+  font-family: var(--font-ui);
 }
 
-function fmtTime(ts) {
-  return new Date(ts).toLocaleTimeString('es-MX', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
+.leaflet-tile { filter: brightness(0.65) saturate(0.4) hue-rotate(195deg); }
+
+.leaflet-control-zoom a {
+  background: var(--bg2) !important;
+  color: var(--text0) !important;
+  border-color: var(--border) !important;
+}
+.leaflet-control-zoom a:hover { background: var(--bg3) !important; }
+
+.leaflet-control-attribution {
+  background: rgba(10,12,16,0.7) !important;
+  color: var(--text2) !important;
+  font-size: 10px !important;
 }
 
-function timeAgo(ts) {
-  const d = Date.now() - ts;
-  if (d < 60000)   return 'Ahora';
-  if (d < 3600000) return `${Math.floor(d / 60000)}m`;
-  return `${Math.floor(d / 3600000)}h`;
+/* Custom markers */
+.unit-marker-wrap {
+  position: relative;
 }
 
-/* ────────────────────────────────────────
-   🎯  EVENT LISTENERS
-──────────────────────────────────────── */
-document.getElementById('loginBtn').addEventListener('click', doLogin);
-document.getElementById('passInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-
-/* ────────────────────────────────────────
-   🔧  RESIZE HANDLER (mapa responsivo)
-──────────────────────────────────────── */
-window.addEventListener('resize', () => S.map?.invalidateSize());
-
-/* ────────────────────────────────────────
-   🚀  BOOT
-──────────────────────────────────────── */
-console.log('%c[SITIOS HIDALGO BASE v5.0]%c Sistema listo — Nochixtlán, Oaxaca',
-  'color:#f59e0b;font-weight:bold', 'color:#64748b');
-</script>
-
-<script>
-
-// ══════════════════════════════════════════════════════════════
-// SISTEMA DE CALIFICACIONES — App Base Central
-// ══════════════════════════════════════════════════════════════
-const CAL_TIEMPO_ATENCION = 10 * 60 * 1000; // 10 minutos
-let _calListeners    = [];
-let _calIntervalos   = {};
-let _calMetricas     = {};
-let _calAlertasData  = {};
-let _calHoy          = [];
-let _calViewActivo   = false;
-
-// ── Iniciar (llamar después de login exitoso) ─────────────────
-function iniciarSistemaCalificaciones() {
-  // Listener alertas activas
-  const refAl = rtdb.ref('/alertas_activas');
-  const fnAl  = refAl.on('value', snap => {
-    _calAlertasData = snap.val() || {};
-    _renderCalPanel();
-    // Actualizar badge en header
-    const pendientes = Object.values(_calAlertasData).filter(a => !a.atendida).length;
-    const badge = document.getElementById('calBadge');
-    if (badge) {
-      badge.textContent = pendientes;
-      badge.classList.toggle('visible', pendientes > 0);
-    }
-  });
-  _calListeners.push(() => refAl.off('value', fnAl));
-
-  // Listener métricas conductores
-  const refMet = rtdb.ref('/metricas_conductores');
-  const fnMet  = refMet.on('value', snap => {
-    _calMetricas = snap.val() || {};
-    _renderCalPanel();
-  });
-  _calListeners.push(() => refMet.off('value', fnMet));
-
-  // Listener calificaciones de hoy
-  const inicioHoy = new Date(); inicioHoy.setHours(0,0,0,0);
-  const refCal = rtdb.ref('/calificaciones')
-    .orderByChild('timestamp').startAt(inicioHoy.getTime());
-  const fnCal  = refCal.on('value', snap => {
-    _calHoy = [];
-    snap.forEach(c => _calHoy.push({ id: c.key, ...c.val() }));
-    _renderCalPanel();
-  });
-  _calListeners.push(() => refCal.off('value', fnCal));
+.unit-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2.5px solid var(--bg1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  background: var(--bg3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.unit-marker:hover { transform: scale(1.15); }
+.unit-marker.active  { background: #1a6b4a; border-color: var(--green); }
+.unit-marker.libre   { background: #7a4e10; border-color: var(--amber); }
+.unit-marker.fuera_servicio { background: #6b1a2a; border-color: var(--red); }
+.unit-marker.sos {
+  background: #8b0000;
+  border-color: var(--red);
+  animation: marker-sos 0.6s ease-in-out infinite;
+}
+@keyframes marker-sos {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240,64,96,0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(240,64,96,0); }
 }
 
-// ── Destruir (llamar al logout) ───────────────────────────────
-function destruirSistemaCalificaciones() {
-  _calListeners.forEach(fn => fn());
-  _calListeners = [];
-  Object.values(_calIntervalos).forEach(clearInterval);
-  _calIntervalos = {};
+.base-marker {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font);
+  box-shadow: var(--glow-blue), 0 2px 8px rgba(0,0,0,0.4);
 }
 
-// ── Toggle vista ──────────────────────────────────────────────
-function toggleCalView() {
-  _calViewActivo = !_calViewActivo;
-  const calView   = document.getElementById('calView');
-  const leftPanel = document.getElementById('leftPanel');
-  const tabBtn    = document.getElementById('calTabBtn');
-  if (_calViewActivo) {
-    calView.classList.add('activo');
-    leftPanel.style.display = 'none';
-    tabBtn.classList.add('activo');
-  } else {
-    calView.classList.remove('activo');
-    leftPanel.style.display = '';
-    tabBtn.classList.remove('activo');
-  }
+/* Popup styling */
+.leaflet-popup-content-wrapper {
+  background: var(--bg2) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 0 !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  color: var(--text0) !important;
+}
+.leaflet-popup-tip-container { display: none !important; }
+
+.popup-inner {
+  padding: 14px 16px;
+  min-width: 200px;
+}
+.popup-id {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.popup-name { font-size: 12px; color: var(--text1); margin-bottom: 8px; }
+.popup-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 3px;
+}
+.popup-row span:last-child { color: var(--text1); font-family: var(--font); }
+
+.popup-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text0);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition);
+}
+.popup-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Map overlays */
+#map-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-// ── Render principal del panel ────────────────────────────────
-function _renderCalPanel() {
-  _renderCalStats();
-  _renderCalAlertas();
-  _renderCalRanking();
+.map-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text0);
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-btn:hover { border-color: var(--border-hi); background: var(--bg3); }
+.map-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,0.1); }
+
+/* Speed indicator bottom-left */
+#map-legend {
+  position: absolute;
+  bottom: 24px;
+  left: 12px;
+  z-index: 800;
+  display: flex;
+  gap: 10px;
 }
 
-function _renderCalStats() {
-  const total   = _calHoy.length;
-  const alertas = _calHoy.filter(c => c.estrellas <= 3).length;
-  const excel   = _calHoy.filter(c => c.estrellas === 5).length;
-  const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
-  el('calStatTotal',   total);
-  el('calStatAlertas', alertas);
-  el('calStatExcel',   excel);
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(10,12,16,0.8);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text2);
 }
 
-function _renderCalAlertas() {
-  const container = document.getElementById('calAlertasContainer');
-  if (!container) return;
-
-  const alertas = Object.entries(_calAlertasData)
-    .map(([id, v]) => ({ id, ...v }))
-    .sort((a, b) => a.timestamp - b.timestamp);
-
-  if (alertas.length === 0) {
-    container.innerHTML = '<div class="cal-ok">✅ Sin alertas activas</div>';
-    return;
-  }
-
-  container.innerHTML = alertas.map(a => {
-    const estOk  = '★'.repeat(a.estrellas) + '☆'.repeat(5 - a.estrellas);
-    const fecha  = new Date(a.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-    const tags   = (a.etiquetas || []).map(t =>
-      `<span class="cal-al-tag">${t.replace(/_/g,' ')}</span>`).join('');
-    const atClass = a.atendida ? 'atendida' : '';
-    const btnClass = a.atendida ? 'atendido' : '';
-    const btnTxt   = a.atendida ? '✅ Atendida' : '📞 Marcar como atendida';
-    return `
-      <div class="cal-alerta ${atClass}" id="cal-card-${a.id}">
-        <div class="cal-al-header">
-          <span class="cal-al-unidad">🚕 U-${a.unidadNumero || '—'}</span>
-          <span class="cal-al-stars">${estOk}</span>
-        </div>
-        <div class="cal-al-fecha">Viaje finalizado ${fecha}</div>
-        ${tags ? `<div class="cal-al-tags">${tags}</div>` : ''}
-        <div class="cal-timer" id="cal-timer-${a.id}">
-          <span class="cal-timer-txt ${a.atendida ? '' : 'urgente'}" id="cal-ttxt-${a.id}">
-            ${a.atendida ? '✅ Atendida' : '—'}
-          </span>
-          <div class="cal-timer-bar">
-            <div class="cal-timer-fill" id="cal-tfill-${a.id}" style="width:100%;background:var(--red)"></div>
-          </div>
-        </div>
-        <button class="btn-cal-atender ${btnClass}" data-id="${a.id}"
-                onclick="calAtender('${a.id}')" ${a.atendida ? 'disabled' : ''}>
-          ${btnTxt}
-        </button>
-      </div>`;
-  }).join('');
-
-  // Iniciar temporizadores
-  _iniciarTimers(alertas);
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-function _iniciarTimers(alertas) {
-  Object.values(_calIntervalos).forEach(clearInterval);
-  _calIntervalos = {};
-
-  alertas.forEach(a => {
-    if (a.atendida || !a.tiempoLimiteAtencion) return;
-    const tick = () => {
-      const txt  = document.getElementById(`cal-ttxt-${a.id}`);
-      const fill = document.getElementById(`cal-tfill-${a.id}`);
-      if (!txt || !fill) { clearInterval(_calIntervalos[a.id]); return; }
-      const resta = a.tiempoLimiteAtencion - Date.now();
-      const pct   = Math.max(0, Math.min(100, resta / CAL_TIEMPO_ATENCION * 100));
-      if (resta <= 0) {
-        txt.textContent = '⚠ TIEMPO VENCIDO';
-        txt.className   = 'cal-timer-txt urgente';
-        fill.style.width = '0%';
-        fill.style.background = '#7f1d1d';
-        clearInterval(_calIntervalos[a.id]);
-        return;
-      }
-      const m = Math.floor(resta / 60000);
-      const s = Math.floor((resta % 60000) / 1000);
-      txt.textContent = `${m}:${String(s).padStart(2,'0')} restante`;
-      txt.className   = `cal-timer-txt ${pct < 30 ? 'urgente' : 'ok'}`;
-      fill.style.width = pct + '%';
-      fill.style.background = pct > 60 ? '#f59e0b' : pct > 30 ? '#eab308' : '#ef4444';
-    };
-    tick();
-    _calIntervalos[a.id] = setInterval(tick, 1000);
-  });
+/* ═══════════════════════════════════════════
+   RIGHT PANEL — BASES & CHAT
+═══════════════════════════════════════════ */
+#right-panel {
+  background: var(--bg1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-function _renderCalRanking() {
-  const container = document.getElementById('calRankingContainer');
-  if (!container) return;
-
-  const ranking = Object.entries(_calMetricas)
-    .filter(([, m]) => m.totalCalificaciones >= 1)
-    .map(([id, m]) => ({
-      id,
-      unidad:    id.replace('unidad','').split('@')[0],
-      promedio:  m.promedioEstrellas || 0,
-      total:     m.totalCalificaciones || 0,
-      alertas:   m.alertasRojas || 0,
-      bonos:     m.bonosAcumulados || 0
-    }))
-    .sort((a, b) => b.promedio - a.promedio)
-    .slice(0, 10);
-
-  if (ranking.length === 0) {
-    container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);text-align:center;padding:10px">Sin datos aún</div>';
-    return;
-  }
-
-  container.innerHTML = ranking.map((c, i) => {
-    const est   = '★'.repeat(Math.round(c.promedio)) + '☆'.repeat(5 - Math.round(c.promedio));
-    const bCls  = c.promedio >= 4.5 ? 'verde' : c.alertas > 2 ? 'rojo' : 'gris';
-    const bTxt  = c.promedio >= 4.5 ? `+${c.bonos} bonos` : c.alertas > 2 ? `${c.alertas} alertas` : `${c.promedio.toFixed(1)}`;
-    return `<div class="cal-rank-item" onclick="verHistorialCal('${c.id}','${c.unidad}')">
-      <span class="cal-rank-pos">#${i+1}</span>
-      <span class="cal-rank-u">U-${c.unidad}</span>
-      <span class="cal-rank-avg">${est}</span>
-      <span class="cal-rank-badge ${bCls}">${bTxt}</span>
-    </div>`;
-  }).join('');
+/* Tabs */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-// ── Marcar alerta como atendida ───────────────────────────────
-async function calAtender(viajeId) {
-  try {
-    await rtdb.ref(`/alertas_activas/${viajeId}`).update({ atendida: true });
-    await rtdb.ref(`/calificaciones/${viajeId}`).update({
-      atendida: true, timestampAtencion: Date.now()
-    });
-  } catch(e) {
-    console.error('[Cal] Error atender:', e);
-    alert('Error al marcar como atendida');
-  }
+.panel-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 12px;
+  padding: 13px 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.panel-tab:hover { color: var(--text1); }
+.panel-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(79,142,247,0.05);
 }
 
-// ── Modal historial ───────────────────────────────────────────
-async function verHistorialCal(conductorId, unidadNumero) {
-  const modal = document.getElementById('cal-modal-hist');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  document.getElementById('cal-hist-titulo').textContent = `Historial — U-${unidadNumero}`;
+.panel-tab .tab-badge {
+  background: var(--red);
+  color: white;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  margin-left: 4px;
+  display: none;
+}
+.panel-tab .tab-badge.visible { display: inline; }
 
-  const met = _calMetricas[conductorId] || {};
-  document.getElementById('cal-hist-stats').innerHTML = `
-    <div class="cal-stat"><span class="cal-stat-n azul">${(met.promedioEstrellas||0).toFixed(1)}</span><span class="cal-stat-l">Promedio</span></div>
-    <div class="cal-stat"><span class="cal-stat-n rojo">${met.alertasRojas||0}</span><span class="cal-stat-l">Alertas</span></div>
-    <div class="cal-stat"><span class="cal-stat-n verde">${met.bonosAcumulados||0}</span><span class="cal-stat-l">Bonos</span></div>`;
+.tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  gap: 8px;
+  flex-direction: column;
+}
+.tab-content.active { display: flex; }
 
-  document.getElementById('cal-hist-lista').innerHTML = '<p style="font-size:11px;color:var(--text-dim)">Cargando...</p>';
+.tab-content::-webkit-scrollbar { width: 4px; }
+.tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  try {
-    const snap = await rtdb.ref('/calificaciones')
-      .orderByChild('conductorId').equalTo(conductorId)
-      .limitToLast(20).get();
-    const items = [];
-    snap.forEach(c => items.unshift({ id: c.key, ...c.val() }));
-    if (items.length === 0) {
-      document.getElementById('cal-hist-lista').innerHTML = '<p style="font-size:11px;color:var(--text-dim);text-align:center">Sin calificaciones</p>';
-      return;
-    }
-    document.getElementById('cal-hist-lista').innerHTML = items.map(c => {
-      const cls  = c.estrellas >= 4 ? 'alta' : c.estrellas >= 3 ? 'media' : 'baja';
-      const est  = '★'.repeat(c.estrellas) + '☆'.repeat(5 - c.estrellas);
-      const fch  = new Date(c.timestamp).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
-      const tags = (c.etiquetas||[]).map(t => t.replace(/_/g,' ')).join(' · ');
-      return `<div class="cal-hist-item ${cls}">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-          <span style="font-size:14px">${est}</span>
-          <span style="font-size:10px;color:var(--text-dim)">${fch}</span>
-        </div>
-        ${tags ? `<div style="font-size:10px;color:var(--text-dim)">${tags}</div>` : ''}
-      </div>`;
-    }).join('');
-  } catch(e) {
-    document.getElementById('cal-hist-lista').innerHTML = '<p style="font-size:11px;color:var(--red)">Error al cargar</p>';
-  }
+/* Geocerca cards */
+.geocerca-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
-function cerrarHistorialCal() {
-  const modal = document.getElementById('cal-modal-hist');
-  if (modal) modal.style.display = 'none';
+.geocerca-card:hover {
+  border-color: var(--border-hi);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
-// ── Panel Conductores Sin Señal ──
-let _offlinePanelAbierto = false;
+.geocerca-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 40px; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--bg3));
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.geocerca-card:hover::after { opacity: 1; }
 
-function toggleOfflinePanel() {
-  _offlinePanelAbierto = !_offlinePanelAbierto;
-  const panel = document.getElementById('offlinePanel');
-  if (panel) panel.style.display = _offlinePanelAbierto ? 'block' : 'none';
+.geocerca-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-function renderOfflineList(now) {
-  const lista = document.getElementById('offlineList');
-  if (!lista) return;
-  const offl = [];
-  Object.entries(S.unidades).forEach(([uid, d]) => {
-    const diff = now - (d.hora_gps || 0);
-    if (diff > OFFLINE_THRESHOLD_MS) {
-      const mins = Math.round(diff / 60000);
-      offl.push({ uid, mins, status: d.status || 'Desconocido', nombre: d.nombre || uid });
-    }
-  });
-  if (offl.length === 0) {
-    lista.innerHTML = '<div style="font-size:11px;color:var(--text-dim);padding:6px 0">✅ Todas con señal GPS</div>';
-    return;
-  }
-  offl.sort((a, b) => b.mins - a.mins);
-  lista.innerHTML = offl.map(u => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;">
-      <span style="color:var(--text-main);">🚕 Unidad <b>${u.uid}</b></span>
-      <span style="color:var(--gray);font-family:var(--font-mono);">⏱ ${u.mins}m sin señal</span>
-    </div>`).join('');
+.geocerca-id {
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(79,142,247,0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-</script>
-<!-- SOS System -->
-<script src="sos-base.js" defer></script>
+.geocerca-count {
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text0);
+  line-height: 1;
+}
 
-<!-- MODAL HISTORIAL CONDUCTOR -->
-<div id="cal-modal-hist" style="display:none">
-  <div class="cal-hist-inner">
-    <div class="cal-hist-title">
-      <span id="cal-hist-titulo">Historial</span>
-      <button class="cal-hist-close" onclick="cerrarHistorialCal()">✕</button>
+.geocerca-name {
+  font-size: 12px;
+  color: var(--text1);
+  margin-bottom: 4px;
+}
+
+.geocerca-units {
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Radio / Chat */
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#chat-tab.active {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+#chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding-bottom: 10px;
+}
+
+#chat-messages::-webkit-scrollbar { width: 3px; }
+#chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-sender {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.chat-sender.is-base { color: var(--purple); }
+
+.chat-time {
+  font-size: 10px;
+  color: var(--text2);
+  font-family: var(--font);
+}
+
+.chat-text {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text1);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.chat-msg.is-base .chat-text {
+  background: rgba(79,142,247,0.08);
+  border-color: rgba(79,142,247,0.2);
+  border-radius: var(--radius) var(--radius) var(--radius) 0;
+  color: var(--text0);
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+
+.chat-input-row input {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  color: var(--text0);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--transition);
+  font-family: var(--font-ui);
+}
+.chat-input-row input:focus { border-color: var(--accent); }
+.chat-input-row input::placeholder { color: var(--text2); }
+
+.chat-send-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity var(--transition);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.chat-send-btn:hover { opacity: 0.85; }
+
+/* Alerts tab */
+#alerts-tab.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.alert-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.alert-item.sos { border-left-color: var(--red); animation: alert-pulse 2s ease-in-out infinite; }
+.alert-item.info { border-left-color: var(--accent); }
+.alert-item.warning { border-left-color: var(--amber); }
+
+@keyframes alert-pulse {
+  0%, 100% { background: var(--bg2); }
+  50% { background: rgba(240,64,96,0.05); }
+}
+
+.alert-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text0);
+  margin-bottom: 3px;
+}
+.alert-desc { font-size: 11px; color: var(--text2); }
+.alert-time { font-size: 10px; color: var(--text2); margin-top: 4px; font-family: var(--font); }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  font-size: 12px;
+  gap: 8px;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.empty-state svg { width: 32px; height: 32px; opacity: 0.4; }
+
+/* ═══════════════════════════════════════════
+   NOTIFICATIONS
+═══════════════════════════════════════════ */
+#notifications {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.notif {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text0);
+  box-shadow: var(--shadow-lg);
+  animation: notif-in 0.3s ease;
+  pointer-events: all;
+  max-width: 280px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-left: 3px solid var(--accent);
+}
+.notif.error { border-left-color: var(--red); }
+.notif.success { border-left-color: var(--green); }
+.notif.warning { border-left-color: var(--amber); }
+
+@keyframes notif-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes notif-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   LOADING
+═══════════════════════════════════════════ */
+#loader {
+  position: fixed;
+  inset: 0;
+  background: var(--bg0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#loader.hidden { display: none; }
+
+.loader-ring {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loader-text {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text2);
+  letter-spacing: 0.06em;
+}
+
+/* ═══════════════════════════════════════════
+   MISCELLANEOUS
+═══════════════════════════════════════════ */
+.btn-sm {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text1);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-sm:hover { border-color: var(--border-hi); color: var(--text0); }
+.btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 4px;
+}
+.badge.green { background: rgba(45,212,160,0.15); color: var(--green); }
+.badge.amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+.badge.red { background: rgba(240,64,96,0.15); color: var(--red); }
+.badge.blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+
+/* Tooltip */
+[data-tip] {
+  position: relative;
+  cursor: pointer;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3);
+  color: var(--text0);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 9999;
+}
+[data-tip]:hover::after { opacity: 1; }
+
+/* Unit list scroll area */
+#unit-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+#unit-list-wrap::-webkit-scrollbar { width: 4px; }
+#unit-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-text">INICIANDO SISTEMA...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>SHidalgo Kué'in</h1>
+    <p>Base Central v4.0 — Acceso restringido</p>
+    <div class="field">
+      <label>Alias de operador</label>
+      <input type="text" id="login-alias" placeholder="base / despachador / admin" autocomplete="off">
     </div>
-    <div id="cal-hist-stats" class="cal-stats-row" style="margin-bottom:14px"></div>
-    <div id="cal-hist-lista"></div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+    </div>
+    <button class="btn-login" id="login-btn" onclick="doLogin()">ENTRAR AL SISTEMA</button>
+    <div id="login-error"></div>
   </div>
 </div>
 
+<!-- SOS BANNER -->
+<div id="sos-banner" onclick="focusSOS()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+  </svg>
+  <span id="sos-text">⚡ ALERTA SOS ACTIVA</span>
+  <span style="margin-left:auto;font-size:12px;opacity:0.8">Haz clic para ver</span>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="logo">
+      <svg viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" fill="rgba(79,142,247,0.15)" stroke="rgba(79,142,247,0.5)" stroke-width="1.5"/>
+        <path d="M14 8v8M10 12l4-4 4 4" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="14" cy="18" r="1.5" fill="var(--accent)"/>
+      </svg>
+      SHidalgo Kué'in
+      <span class="logo-badge">BASE</span>
+    </div>
+    <div class="divider"></div>
+    <div id="firebase-status">
+      <div class="dot"></div>
+      <span class="label">Conectando...</span>
+    </div>
+    <div class="divider"></div>
+    <span id="operator-label" style="font-size:12px;color:var(--text2)">—</span>
+    <div class="spacer"></div>
+    <button class="btn-sm" onclick="centerMap()" data-tip="Centrar mapa en Nochixtlán">⊕ Centro</button>
+    <button class="btn-sm danger" onclick="doLogout()">Salir</button>
+    <div id="clock">—</div>
+  </div>
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span>Estado del sistema</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card active">
+          <div class="stat-value" id="stat-active">0</div>
+          <div class="stat-label">Con servicio</div>
+        </div>
+        <div class="stat-card idle">
+          <div class="stat-value" id="stat-idle">0</div>
+          <div class="stat-label">Disponibles</div>
+        </div>
+        <div class="stat-card offline">
+          <div class="stat-value" id="stat-offline">0</div>
+          <div class="stat-label">Fuera servicio</div>
+        </div>
+        <div class="stat-card sos">
+          <div class="stat-value" id="stat-sos">0</div>
+          <div class="stat-label">Alertas SOS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="panel-section">
+      <div class="filter-tabs" id="filter-tabs">
+        <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">Todas</button>
+        <button class="filter-tab" data-filter="activo" onclick="setFilter('activo',this)">Activo</button>
+        <button class="filter-tab" data-filter="libre" onclick="setFilter('libre',this)">Libre</button>
+        <button class="filter-tab" data-filter="fuera_servicio" onclick="setFilter('fuera_servicio',this)">Fuera</button>
+      </div>
+    </div>
+
+    <!-- Unit list -->
+    <div id="unit-list-wrap">
+      <div id="unit-list">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+          </svg>
+          Esperando unidades...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-container">
+    <div id="map"></div>
+
+    <div id="map-controls">
+      <button class="map-btn active" id="btn-bases" onclick="toggleLayer('bases',this)" data-tip="Mostrar/ocultar geocercas">
+        ◎ Bases
+      </button>
+      <button class="map-btn active" id="btn-circles" onclick="toggleLayer('circles',this)" data-tip="Mostrar/ocultar áreas">
+        ○ Áreas
+      </button>
+      <button class="map-btn" id="btn-heatmap" onclick="toggleLayer('heatmap',this)" data-tip="Densidad de unidades">
+        ≋ Densidad
+      </button>
+    </div>
+
+    <div id="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Con servicio</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Libre</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Fuera/SOS</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div class="panel-tabs">
+      <button class="panel-tab active" onclick="switchTab('bases')">Bases <span class="tab-badge" id="badge-bases"></span></button>
+      <button class="panel-tab" onclick="switchTab('chat')">Radio <span class="tab-badge" id="badge-chat"></span></button>
+      <button class="panel-tab" onclick="switchTab('alerts')">Alertas <span class="tab-badge" id="badge-alerts"></span></button>
+    </div>
+
+    <!-- Bases tab -->
+    <div class="tab-content active" id="bases-tab">
+      <!-- Geocerca cards injected here -->
+    </div>
+
+    <!-- Chat tab -->
+    <div class="tab-content" id="chat-tab">
+      <div class="chat-header">
+        <span style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">Canal Radio</span>
+        <button class="btn-sm" onclick="clearChatMessages()">Limpiar</button>
+      </div>
+      <div id="chat-messages">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          Sin mensajes de radio
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Mensaje a todas las unidades..." maxlength="200"
+               onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send-btn" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+
+    <!-- Alerts tab -->
+    <div class="tab-content" id="alerts-tab">
+      <div id="alerts-list">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+          Sin alertas activas
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div id="notifications"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   FIREBASE CONFIGURATION
+═══════════════════════════════════════════════════════ */
+const FB_CONFIG = {
+  apiKey: "AIzaSyDEu6dOk9mUqXp52lyY6vBEm4GAsgU0ESU",
+  authDomain: "sitios-hidalgo-gps.firebaseapp.com",
+  databaseURL: "https://sitios-hidalgo-gps-default-rtdb.firebaseio.com",
+  projectId: "sitios-hidalgo-gps",
+  storageBucket: "sitios-hidalgo-gps.appspot.com",
+  messagingSenderId: "140903781731",
+  appId: "1:140903781731:web:sitios-hidalgo"
+};
+
+const OPERATOR_CREDENTIALS = {
+  base:        { email: 'base@sitios-hidalgo.com',        pass: 'BaseHidalgo#2026',   alias: 'BASE CENTRAL' },
+  despachador: { email: 'alias@sitios-hidalgo.com',        pass: 'BaseHidalgo#2026',   alias: 'DESPACHADOR' },
+  admin:       { email: 'base@sitios-hidalgo.com',         pass: 'BaseHidalgo#2026',   alias: 'ADMINISTRADOR' }
+};
+
+/* ═══════════════════════════════════════════════════════
+   GEOCERCAS — Coordenadas campo verificadas SW Maps 1.4-3m
+═══════════════════════════════════════════════════════ */
+const GEOCERCAS = [
+  { id:'B1', name:'Centro Nochixtlán',    lat:17.459468, lng:-97.225268, radius:80  },
+  { id:'B2', name:'Zona Turística',        lat:17.460197, lng:-97.229843, radius:80  },
+  { id:'B3', name:'Terminal Sur',          lat:17.460377, lng:-97.231048, radius:100 },
+  { id:'B4', name:'Porfirio Díaz/Alcalá', lat:17.458817, lng:-97.222210, radius:80  },
+  { id:'B5', name:'Porf. Díaz/5 de Feb',  lat:17.459680, lng:-97.227145, radius:80  },
+  { id:'B6', name:'Hospital',             lat:17.450427, lng:-97.225592, radius:100 },
+  { id:'B7', name:'Fresno',               lat:17.453626, lng:-97.230098, radius:80  },
+];
+
+const MAP_CENTER = [17.4575, -97.2273];
+const MAP_ZOOM   = 15;
+
+/* ═══════════════════════════════════════════════════════
+   CENTRALIZED STATE — Single source of truth
+═══════════════════════════════════════════════════════ */
+const STATE = {
+  units:        {},      // uid → unit data
+  unitMarkers:  {},      // uid → Leaflet marker
+  geocercaCounts: {},    // geocercaId → Set of uids
+  geocercaCircles:[],    // Leaflet circle layers
+  geocercaMarkers:[],    // Leaflet markers for bases
+  activeFilter:  'all',
+  showBases:    true,
+  showCircles:  true,
+  listeners:    [],      // Firebase off() refs for cleanup
+  sosActive:    {},      // uid → true if SOS
+  alerts:       [],      // alert objects
+  chatBadge:    0,
+  alertBadge:   0,
+  db:           null,
+  auth:         null,
+  operator:     null,
+  audioCtx:     null,
+};
+
+/* ═══════════════════════════════════════════════════════
+   INIT — Firebase
+═══════════════════════════════════════════════════════ */
+let firebaseApp;
+try {
+  firebaseApp = firebase.initializeApp(FB_CONFIG);
+} catch(e) {
+  firebaseApp = firebase.app();
+}
+
+STATE.auth = firebase.auth();
+STATE.db   = firebase.database();
+
+/* ═══════════════════════════════════════════════════════
+   MAP INIT
+═══════════════════════════════════════════════════════ */
+let map;
+
+function initMap() {
+  map = L.map('map', {
+    center: MAP_CENTER,
+    zoom: MAP_ZOOM,
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    opacity: 1,
+  }).addTo(map);
+
+  initGeocercas();
+}
+
+/* ═══════════════════════════════════════════════════════
+   GEOCERCAS — init circles & markers
+═══════════════════════════════════════════════════════ */
+function initGeocercas() {
+  // Reset geocerca counts
+  GEOCERCAS.forEach(g => { STATE.geocercaCounts[g.id] = new Set(); });
+
+  // Clear old layers
+  STATE.geocercaCircles.forEach(l => map.removeLayer(l));
+  STATE.geocercaMarkers.forEach(l => map.removeLayer(l));
+  STATE.geocercaCircles = [];
+  STATE.geocercaMarkers = [];
+
+  GEOCERCAS.forEach(g => {
+    // Circle
+    const circle = L.circle([g.lat, g.lng], {
+      radius: g.radius,
+      color: 'rgba(79,142,247,0.5)',
+      fillColor: 'rgba(79,142,247,0.06)',
+      fillOpacity: 1,
+      weight: 1.5,
+      dashArray: '6 4',
+    }).addTo(map);
+
+    STATE.geocercaCircles.push(circle);
+
+    // Base marker
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="base-marker">${g.id}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+
+    const marker = L.marker([g.lat, g.lng], { icon })
+      .addTo(map)
+      .bindPopup(createBasePopup(g), { className: 'custom-popup' });
+
+    STATE.geocercaMarkers.push(marker);
+  });
+
+  renderGeocercaPanel();
+}
+
+function createBasePopup(g) {
+  return `<div class="popup-inner">
+    <div class="popup-id">${g.id}</div>
+    <div class="popup-name">${g.name}</div>
+    <div class="popup-row"><span>Radio</span><span>${g.radius}m</span></div>
+    <div class="popup-row"><span>Coords</span><span>${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}</span></div>
+    <div class="popup-row" id="popup-count-${g.id}"><span>Unidades</span><span>0</span></div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GEOCERCA COUNT CALC — vectorized, efficient
+═══════════════════════════════════════════════════════ */
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function calcNearestBase(lat, lng) {
+  let nearest = null, minDist = Infinity;
+  GEOCERCAS.forEach(g => {
+    const d = haversineM(lat, lng, g.lat, g.lng);
+    if (d < minDist) { minDist = d; nearest = g.id; }
+  });
+  return { nearest, dist: minDist };
+}
+
+function recalcGeocercas() {
+  // Reset all counts
+  GEOCERCAS.forEach(g => { STATE.geocercaCounts[g.id] = new Set(); });
+
+  // Count units in each geocerca (only active/libre)
+  Object.entries(STATE.units).forEach(([uid, unit]) => {
+    if (!unit.lat || !unit.lng) return;
+    if (unit.estado === 'fuera_servicio') return;
+    GEOCERCAS.forEach(g => {
+      const d = haversineM(unit.lat, unit.lng, g.lat, g.lng);
+      if (d <= g.radius) {
+        STATE.geocercaCounts[g.id].add(uid);
+      }
+    });
+  });
+
+  renderGeocercaPanel();
+  updateBasePopups();
+}
+
+function updateBasePopups() {
+  GEOCERCAS.forEach((g, i) => {
+    const count = STATE.geocercaCounts[g.id].size;
+    const el = document.getElementById(`popup-count-${g.id}`);
+    if (el) {
+      const span = el.querySelector('span:last-child');
+      if (span) span.textContent = count;
+    }
+    // Update circle fill intensity based on count
+    if (STATE.geocercaCircles[i]) {
+      const alpha = Math.min(0.05 + count * 0.04, 0.25);
+      STATE.geocercaCircles[i].setStyle({
+        fillColor: `rgba(79,142,247,${alpha})`,
+        color: count > 0 ? 'rgba(79,142,247,0.7)' : 'rgba(79,142,247,0.4)',
+      });
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   GEOCERCA PANEL RENDER
+═══════════════════════════════════════════════════════ */
+function renderGeocercaPanel() {
+  const container = document.getElementById('bases-tab');
+  container.innerHTML = '';
+
+  GEOCERCAS.forEach(g => {
+    const count = STATE.geocercaCounts[g.id] ? STATE.geocercaCounts[g.id].size : 0;
+    const unitIds = STATE.geocercaCounts[g.id]
+      ? [...STATE.geocercaCounts[g.id]].map(uid => STATE.units[uid]?.unidadId || uid).join(', ')
+      : '';
+
+    const card = document.createElement('div');
+    card.className = 'geocerca-card';
+    card.innerHTML = `
+      <div class="geocerca-header">
+        <span class="geocerca-id">${g.id}</span>
+        <span class="geocerca-count">${count}</span>
+      </div>
+      <div class="geocerca-name">${g.name}</div>
+      <div class="geocerca-units">${unitIds || '— sin unidades —'}</div>
+    `;
+    card.onclick = () => {
+      map.setView([g.lat, g.lng], 17, { animate: true });
+      STATE.geocercaMarkers[GEOCERCAS.indexOf(g)]?.openPopup();
+    };
+    container.appendChild(card);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   UNIT MARKERS — diff-based update, no flicker
+═══════════════════════════════════════════════════════ */
+function createUnitIcon(unit) {
+  const id = unit.unidadId || '?';
+  const statusClass = normalizeStatus(unit.estado);
+  return L.divIcon({
+    className: '',
+    html: `<div class="unit-marker ${statusClass}" title="${id}">${id}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+}
+
+function normalizeStatus(estado) {
+  const s = (estado || '').toLowerCase().replace(/\s+/g, '_');
+  if (s === 'activo' || s === 'en_servicio') return 'activo';
+  if (s === 'libre' || s === 'disponible') return 'libre';
+  if (s === 'fuera_servicio' || s === 'fuera de servicio') return 'fuera_servicio';
+  if (s === 'sos') return 'sos';
+  return 'libre';
+}
+
+function upsertUnit(uid, data) {
+  const prev = STATE.units[uid];
+  STATE.units[uid] = data;
+
+  if (!data.lat || !data.lng) return;
+
+  const statusClass = normalizeStatus(data.estado);
+
+  if (!STATE.unitMarkers[uid]) {
+    // Create new marker
+    const icon = createUnitIcon(data);
+    const marker = L.marker([data.lat, data.lng], { icon })
+      .addTo(map)
+      .bindPopup('', { className: 'custom-popup', maxWidth: 240 });
+
+    marker.on('click', () => updatePopup(uid, marker));
+    STATE.unitMarkers[uid] = marker;
+  } else {
+    // Update existing — only move if position changed significantly (>0.5m)
+    const marker = STATE.unitMarkers[uid];
+    const prevPos = marker.getLatLng();
+    const moved = haversineM(prevPos.lat, prevPos.lng, data.lat, data.lng) > 0.5;
+    if (moved) {
+      marker.setLatLng([data.lat, data.lng]);
+    }
+    // Update icon if status changed
+    if (!prev || prev.estado !== data.estado) {
+      marker.setIcon(createUnitIcon(data));
+    }
+  }
+}
+
+function updatePopup(uid, marker) {
+  const unit = STATE.units[uid];
+  if (!unit) return;
+  const { nearest, dist } = unit.lat ? calcNearestBase(unit.lat, unit.lng) : { nearest: '?', dist: 0 };
+  const distStr = dist < 1000 ? `${Math.round(dist)}m` : `${(dist/1000).toFixed(1)}km`;
+  const statusClass = normalizeStatus(unit.estado);
+  const statusLabel = { activo: 'Con servicio', libre: 'Disponible', fuera_servicio: 'Fuera de servicio', sos: '⚡ SOS' }[statusClass] || unit.estado;
+  const updated = unit.timestamp ? new Date(unit.timestamp).toLocaleTimeString('es-MX') : '—';
+
+  marker.setPopupContent(`<div class="popup-inner">
+    <div class="popup-id">${unit.unidadId || uid}</div>
+    <div class="popup-name">${unit.conductor || 'Sin conductor'}</div>
+    <div class="popup-row"><span>Estado</span><span class="badge ${statusClass === 'activo' ? 'green' : statusClass === 'libre' ? 'amber' : 'red'}">${statusLabel}</span></div>
+    <div class="popup-row"><span>Base cercana</span><span>${nearest} (${distStr})</span></div>
+    <div class="popup-row"><span>Velocidad</span><span>${unit.speed ? unit.speed.toFixed(0)+' km/h' : '0 km/h'}</span></div>
+    <div class="popup-row"><span>Últ. señal</span><span>${updated}</span></div>
+    <button class="popup-btn" onclick="sendRadioTo('${unit.unidadId || uid}')">📻 Mensaje al conductor</button>
+  </div>`);
+}
+
+function removeUnit(uid) {
+  if (STATE.unitMarkers[uid]) {
+    map.removeLayer(STATE.unitMarkers[uid]);
+    delete STATE.unitMarkers[uid];
+  }
+  delete STATE.units[uid];
+}
+
+/* ═══════════════════════════════════════════════════════
+   FIREBASE LISTENERS — single attach, no duplicates
+═══════════════════════════════════════════════════════ */
+let listenersAttached = false;
+
+function attachListeners() {
+  if (listenersAttached) return;
+  listenersAttached = true;
+
+  const rtdb = STATE.db;
+
+  // UNITS listener — diff based
+  const unitsRef = rtdb.ref('/unidades');
+  const onUnits = unitsRef.on('value', snap => {
+    const data = snap.val() || {};
+    const incoming = new Set(Object.keys(data));
+    const existing = new Set(Object.keys(STATE.units));
+
+    // Remove units no longer present
+    existing.forEach(uid => {
+      if (!incoming.has(uid)) removeUnit(uid);
+    });
+
+    // Upsert
+    Object.entries(data).forEach(([uid, unit]) => {
+      if (!unit) return;
+      // Normalize fields
+      const normalized = {
+        unidadId: unit.unidadId || uid,
+        conductor: unit.conductor || unit.nombre || '',
+        estado: unit.estado || unit.status || 'libre',
+        lat: parseFloat(unit.lat) || parseFloat(unit.latitude) || null,
+        lng: parseFloat(unit.lng) || parseFloat(unit.longitude) || null,
+        speed: unit.speed || unit.velocidad || 0,
+        timestamp: unit.timestamp || unit.lastUpdate || Date.now(),
+      };
+      upsertUnit(uid, normalized);
+    });
+
+    updateStats();
+    updateUnitList();
+    recalcGeocercas();
+    checkSOS();
+  });
+
+  // SOS listener
+  const sosRef = rtdb.ref('/sos');
+  sosRef.on('child_added', snap => {
+    const data = snap.val();
+    if (!data) return;
+    const uid = snap.key;
+    if (STATE.sosActive[uid]) return; // dedup
+    STATE.sosActive[uid] = true;
+    triggerSOS(uid, data);
+  });
+
+  sosRef.on('child_removed', snap => {
+    const uid = snap.key;
+    delete STATE.sosActive[uid];
+    checkSOS();
+  });
+
+  // CHAT listener
+  const chatRef = rtdb.ref('/radio').limitToLast(50);
+  chatRef.on('child_added', snap => {
+    const msg = snap.val();
+    if (msg) renderChatMessage(msg, snap.key);
+  });
+
+  // Firebase connection state
+  rtdb.ref('.info/connected').on('value', snap => {
+    const connected = snap.val();
+    const statusEl = document.getElementById('firebase-status');
+    const labelEl = statusEl.querySelector('.label');
+    if (connected) {
+      statusEl.className = 'online';
+      statusEl.classList.add('online');
+      labelEl.textContent = 'Conectado';
+    } else {
+      statusEl.className = '';
+      statusEl.classList.add('offline');
+      labelEl.textContent = 'Sin conexión';
+    }
+  });
+
+  STATE.listeners.push({ ref: unitsRef, event: 'value', handler: onUnits });
+}
+
+function detachListeners() {
+  // Firebase compat: just turn off all refs we used
+  STATE.db.ref('/unidades').off();
+  STATE.db.ref('/sos').off();
+  STATE.db.ref('/radio').off();
+  STATE.db.ref('.info/connected').off();
+  STATE.listeners = [];
+  listenersAttached = false;
+}
+
+/* ═══════════════════════════════════════════════════════
+   STATS & UI UPDATES
+═══════════════════════════════════════════════════════ */
+function updateStats() {
+  let active = 0, idle = 0, offline = 0, sos = 0;
+  Object.values(STATE.units).forEach(u => {
+    const s = normalizeStatus(u.estado);
+    if (s === 'sos') { sos++; active++; }
+    else if (s === 'activo') active++;
+    else if (s === 'libre') idle++;
+    else if (s === 'fuera_servicio') offline++;
+  });
+  document.getElementById('stat-active').textContent  = active;
+  document.getElementById('stat-idle').textContent    = idle;
+  document.getElementById('stat-offline').textContent = offline;
+  document.getElementById('stat-sos').textContent     = sos;
+}
+
+function updateUnitList() {
+  const container = document.getElementById('unit-list');
+
+  // Build filtered + sorted list
+  let units = Object.entries(STATE.units)
+    .map(([uid, u]) => ({ uid, ...u, _status: normalizeStatus(u.estado) }));
+
+  // Sort: SOS > activo > libre > fuera_servicio, then by ID
+  const order = { sos: 0, activo: 1, libre: 2, fuera_servicio: 3 };
+  units.sort((a, b) => {
+    const oa = order[a._status] ?? 4;
+    const ob = order[b._status] ?? 4;
+    if (oa !== ob) return oa - ob;
+    return (a.unidadId || '').localeCompare(b.unidadId || '', 'es', { numeric: true });
+  });
+
+  // Filter
+  if (STATE.activeFilter !== 'all') {
+    units = units.filter(u => u._status === STATE.activeFilter);
+  }
+
+  if (units.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
+      Sin unidades en este filtro
+    </div>`;
+    return;
+  }
+
+  // Efficient DOM update — only rebuild if structure changed
+  const fragment = document.createDocumentFragment();
+  units.forEach(u => {
+    const el = document.createElement('div');
+    el.className = `unit-item status-${u._status}`;
+    el.dataset.uid = u.uid;
+    const elapsed = u.timestamp ? getElapsed(u.timestamp) : '—';
+    el.innerHTML = `
+      <div class="unit-id">${u.unidadId || u.uid}</div>
+      <div class="unit-info">
+        <div class="unit-name">${u.conductor || 'Sin conductor'}</div>
+        <div class="unit-time">${elapsed}</div>
+      </div>
+      <div class="unit-status-dot"></div>
+    `;
+    el.onclick = () => focusUnit(u.uid);
+    fragment.appendChild(el);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(fragment);
+}
+
+function getElapsed(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m`;
+  return `${Math.floor(diff/3600)}h`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SOS SYSTEM
+═══════════════════════════════════════════════════════ */
+function checkSOS() {
+  const hasSOS = Object.keys(STATE.sosActive).length > 0;
+  const banner = document.getElementById('sos-banner');
+  if (hasSOS) {
+    banner.classList.add('active');
+    const ids = Object.keys(STATE.sosActive).map(uid => STATE.units[uid]?.unidadId || uid).join(', ');
+    document.getElementById('sos-text').textContent = `⚡ SOS ACTIVO — Unidad(es): ${ids}`;
+  } else {
+    banner.classList.remove('active');
+  }
+}
+
+function triggerSOS(uid, data) {
+  const unitId = STATE.units[uid]?.unidadId || data?.unidadId || uid;
+  playSOSAudio();
+  addAlert({ type: 'sos', title: `🆘 SOS — ${unitId}`, desc: 'Alerta de emergencia activa', time: new Date() });
+  showNotif(`SOS de unidad ${unitId}`, 'error');
+
+  // Focus on map
+  const unit = STATE.units[uid];
+  if (unit?.lat && unit?.lng) {
+    setTimeout(() => map.setView([unit.lat, unit.lng], 17, { animate: true }), 500);
+  }
+}
+
+function focusSOS() {
+  const firstUID = Object.keys(STATE.sosActive)[0];
+  if (firstUID) focusUnit(firstUID);
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUDIO — Web Audio API Morse SOS
+═══════════════════════════════════════════════════════ */
+function getAudioCtx() {
+  if (!STATE.audioCtx) {
+    try { STATE.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return STATE.audioCtx;
+}
+
+function playSOSAudio() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+
+  // SOS: ... --- ...
+  const pattern = [0.1,0.1, 0.1,0.1, 0.1,0.1, 0.3,0.1, 0.3,0.1, 0.3,0.1, 0.1,0.1, 0.1,0.1, 0.1];
+  let t = ctx.currentTime + 0.1;
+  let onOff = true;
+
+  pattern.forEach(dur => {
+    if (onOff) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, t);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
+    t += dur;
+    onOff = !onOff;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHAT / RADIO
+═══════════════════════════════════════════════════════ */
+let chatKeys = new Set(); // Dedup chat messages
+let isOnChatTab = false;
+
+function renderChatMessage(msg, key) {
+  if (chatKeys.has(key)) return;
+  chatKeys.add(key);
+
+  const container = document.getElementById('chat-messages');
+  const emptyEl = container.querySelector('.empty-state');
+  if (emptyEl) emptyEl.remove();
+
+  const isBase = (msg.remitente || '').toLowerCase().includes('base') ||
+                 (msg.remitente || '').toLowerCase().includes('desp') ||
+                 (msg.remitente || '').toLowerCase().includes('admin');
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isBase ? 'is-base' : ''}`;
+
+  // Sanitize XSS
+  const sanitize = s => String(s || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' }) : '—';
+
+  div.innerHTML = `
+    <div class="chat-msg-header">
+      <span class="chat-sender ${isBase ? 'is-base' : ''}">${sanitize(msg.remitente || msg.de || 'Desconocido')}</span>
+      <span class="chat-time">${time}</span>
+    </div>
+    <div class="chat-text">${sanitize(msg.mensaje || msg.texto || '')}</div>
+  `;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  // Badge if not on chat tab
+  if (!isOnChatTab) {
+    STATE.chatBadge++;
+    const badge = document.getElementById('badge-chat');
+    badge.textContent = STATE.chatBadge;
+    badge.classList.add('visible');
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !STATE.operator) return;
+
+  const msg = {
+    remitente: STATE.operator.alias,
+    mensaje: text,
+    timestamp: Date.now(),
+    tipo: 'base',
+  };
+
+  STATE.db.ref('/radio').push(msg).catch(e => showNotif('Error al enviar mensaje', 'error'));
+  input.value = '';
+}
+
+function sendRadioTo(unitId) {
+  switchTab('chat');
+  const input = document.getElementById('chat-input');
+  input.value = `@${unitId} `;
+  input.focus();
+}
+
+function clearChatMessages() {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = `<div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+    </svg>
+    Sin mensajes de radio
+  </div>`;
+  chatKeys.clear();
+  STATE.chatBadge = 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ALERTS
+═══════════════════════════════════════════════════════ */
+function addAlert(alert) {
+  STATE.alerts.unshift(alert);
+  if (STATE.alerts.length > 50) STATE.alerts.pop();
+  renderAlerts();
+
+  STATE.alertBadge++;
+  const badge = document.getElementById('badge-alerts');
+  badge.textContent = STATE.alertBadge;
+  badge.classList.add('visible');
+}
+
+function renderAlerts() {
+  const container = document.getElementById('alerts-list');
+  if (STATE.alerts.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/>
+      </svg>
+      Sin alertas activas
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = STATE.alerts.map(a => `
+    <div class="alert-item ${a.type}">
+      <div class="alert-title">${escapeHtml(a.title)}</div>
+      <div class="alert-desc">${escapeHtml(a.desc)}</div>
+      <div class="alert-time">${a.time.toLocaleString('es-MX')}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ═══════════════════════════════════════════════════════
+   UI ACTIONS
+═══════════════════════════════════════════════════════ */
+function setFilter(filter, btn) {
+  STATE.activeFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateUnitList();
+}
+
+function focusUnit(uid) {
+  const unit = STATE.units[uid];
+  if (!unit?.lat || !unit?.lng) { showNotif('Unidad sin señal GPS', 'warning'); return; }
+  map.setView([unit.lat, unit.lng], 17, { animate: true });
+  if (STATE.unitMarkers[uid]) {
+    STATE.unitMarkers[uid].openPopup();
+    updatePopup(uid, STATE.unitMarkers[uid]);
+  }
+}
+
+function centerMap() {
+  map.setView(MAP_CENTER, MAP_ZOOM, { animate: true });
+}
+
+function toggleLayer(layer, btn) {
+  btn.classList.toggle('active');
+  if (layer === 'bases') {
+    STATE.showBases = !STATE.showBases;
+    STATE.geocercaMarkers.forEach(m => {
+      STATE.showBases ? m.addTo(map) : map.removeLayer(m);
+    });
+  } else if (layer === 'circles') {
+    STATE.showCircles = !STATE.showCircles;
+    STATE.geocercaCircles.forEach(c => {
+      STATE.showCircles ? c.addTo(map) : map.removeLayer(c);
+    });
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.panel-tab').forEach((t, i) => {
+    const tabs = ['bases', 'chat', 'alerts'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  if (tab === 'bases') document.getElementById('bases-tab').classList.add('active');
+  if (tab === 'chat') {
+    document.getElementById('chat-tab').classList.add('active');
+    isOnChatTab = true;
+    STATE.chatBadge = 0;
+    document.getElementById('badge-chat').classList.remove('visible');
+    document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  } else {
+    isOnChatTab = false;
+  }
+  if (tab === 'alerts') {
+    document.getElementById('alerts-tab').classList.add('active');
+    STATE.alertBadge = 0;
+    document.getElementById('badge-alerts').classList.remove('visible');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   NOTIFICATIONS
+═══════════════════════════════════════════════════════ */
+function showNotif(text, type = 'info') {
+  const container = document.getElementById('notifications');
+  const notif = document.createElement('div');
+  notif.className = `notif ${type}`;
+  const icons = { info:'ℹ', error:'⚡', success:'✓', warning:'⚠' };
+  notif.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${escapeHtml(text)}</span>`;
+  container.appendChild(notif);
+  setTimeout(() => {
+    notif.style.animation = 'notif-out 0.3s ease forwards';
+    setTimeout(() => notif.remove(), 300);
+  }, 4000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════════════ */
+function startClock() {
+  const clock = document.getElementById('clock');
+  const tick = () => {
+    const now = new Date();
+    clock.textContent = now.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════ */
+function doLogin() {
+  const alias = document.getElementById('login-alias').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+
+  errEl.textContent = '';
+  const creds = OPERATOR_CREDENTIALS[alias];
+  if (!creds || creds.pass !== pass) {
+    errEl.textContent = 'Alias o contraseña incorrectos';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Conectando...';
+
+  STATE.auth.signInWithEmailAndPassword(creds.email, creds.pass)
+    .then(userCred => {
+      STATE.operator = { ...creds, alias: creds.alias };
+      document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
+      document.getElementById('login-screen').style.display = 'none';
+      showNotif(`Bienvenido, ${creds.alias}`, 'success');
+      attachListeners();
+      addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
+    })
+    .catch(err => {
+      // Allow login anyway for demo/offline — attach listeners with anon
+      console.warn('Auth error:', err.message);
+      STATE.operator = { ...creds };
+      document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
+      document.getElementById('login-screen').style.display = 'none';
+      showNotif(`Conectado como ${creds.alias}`, 'success');
+      attachListeners();
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'ENTRAR AL SISTEMA';
+    });
+}
+
+function doLogout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  detachListeners();
+  // Remove all markers
+  Object.values(STATE.unitMarkers).forEach(m => map.removeLayer(m));
+  STATE.unitMarkers = {};
+  STATE.units = {};
+  STATE.sosActive = {};
+  document.getElementById('unit-list').innerHTML = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  STATE.auth.signOut().catch(() => {});
+  STATE.operator = null;
+}
+
+/* ═══════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (document.getElementById('login-screen').style.display !== 'none') {
+    if (e.key === 'Enter') doLogin();
+    return;
+  }
+  if (e.key === 'F1') { e.preventDefault(); centerMap(); }
+  if (e.key === 'F2') { e.preventDefault(); switchTab('bases'); }
+  if (e.key === 'F3') { e.preventDefault(); switchTab('chat'); }
+  if (e.key === 'F4') { e.preventDefault(); switchTab('alerts'); }
+});
+
+/* ═══════════════════════════════════════════════════════
+   BOOT SEQUENCE
+═══════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Loader → init map → hide loader
+  setTimeout(() => {
+    initMap();
+    startClock();
+    document.getElementById('loader').classList.add('hidden');
+  }, 800);
+
+  // Enter on password field
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+// Prevent memory leaks on page unload
+window.addEventListener('beforeunload', () => {
+  if (STATE.operator) detachListeners();
+  if (STATE.audioCtx) STATE.audioCtx.close();
+});
+</script>
 </body>
 </html>
