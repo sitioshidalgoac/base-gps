@@ -2021,37 +2021,28 @@ function doLogin() {
   const btn   = document.getElementById('login-btn');
 
   errEl.textContent = '';
+
+  // PASO 1 — Validación local primero (sin Firebase)
   const creds = OPERATOR_CREDENTIALS[alias];
   if (!creds || creds.pass !== pass) {
     errEl.textContent = 'Alias o contraseña incorrectos';
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = 'Conectando...';
+  // PASO 2 — Login local exitoso, entrar inmediatamente
+  STATE.operator = { ...creds };
+  document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
+  document.getElementById('login-screen').style.display = 'none';
+  showNotif(`Bienvenido, ${creds.alias}`, 'success');
+  attachListeners();
+  addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
 
+  // PASO 3 — Intentar Firebase Auth en segundo plano (opcional)
+  btn.disabled = true;
   STATE.auth.signInWithEmailAndPassword(creds.email, creds.pass)
-    .then(userCred => {
-      STATE.operator = { ...creds, alias: creds.alias };
-      document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
-      document.getElementById('login-screen').style.display = 'none';
-      showNotif(`Bienvenido, ${creds.alias}`, 'success');
-      attachListeners();
-      addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
-    })
-    .catch(err => {
-      // Allow login anyway for demo/offline — attach listeners with anon
-      console.warn('Auth error:', err.message);
-      STATE.operator = { ...creds };
-      document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
-      document.getElementById('login-screen').style.display = 'none';
-      showNotif(`Conectado como ${creds.alias}`, 'success');
-      attachListeners();
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = 'ENTRAR AL SISTEMA';
-    });
+    .then(() => { console.log('[Auth] Firebase OK'); })
+    .catch(err => { console.warn('[Auth] Firebase opcional falló:', err.code); })
+    .finally(() => { btn.disabled = false; btn.textContent = 'ENTRAR AL SISTEMA'; });
 }
 
 function doLogout() {
