@@ -1311,7 +1311,7 @@ const FB_CONFIG = {
   projectId: "sitios-hidalgo-gps",
   storageBucket: "sitios-hidalgo-gps.appspot.com",
   messagingSenderId: "140903781731",
-  appId: "1:140903781731:web:sitios-hidalgo"
+  appId: "1:140903781731:web:2178219a57a3244db42f56"
 };
 
 // Solo alias → email y nombre visible. Sin contraseñas en el cliente.
@@ -1649,10 +1649,9 @@ function attachListeners() {
       if (!incoming.has(uid)) removeUnit(uid);
     });
 
-    // Upsert
+    // Upsert — saltar unidades ya archivadas para evitar ciclo add/remove en cada snapshot
     Object.entries(data).forEach(([uid, unit]) => {
       if (!unit) return;
-      // Normalize fields
       const normalized = {
         unidadId: unit.unidadId || uid,
         conductor: unit.conductor || unit.nombre || '',
@@ -1662,6 +1661,14 @@ function attachListeners() {
         speed: unit.speed || unit.velocidad || 0,
         timestamp: unit.timestamp || unit.lastUpdate || Date.now(),
       };
+      // Si está archivada y sigue siendo stale, no la re-insertamos
+      if (STATE.archivedUnits[uid]) {
+        const isActive = ['activo','sos'].includes(normalizeStatus(normalized.estado));
+        const isToday  = normalized.timestamp >= getTodayStart();
+        if (!isActive && !isToday) return; // sigue siendo stale → ignorar
+        // Volvió a estar activa → sacarla del archivo y dejar que upsert continúe
+        delete STATE.archivedUnits[uid];
+      }
       upsertUnit(uid, normalized);
     });
 
