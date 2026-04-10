@@ -466,7 +466,7 @@ html, body {
   font-family: var(--font);
   font-size: 10px;
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .unit-status-dot {
@@ -478,6 +478,102 @@ html, body {
 .status-libre .unit-status-dot { background: var(--amber); }
 .status-fuera_servicio .unit-status-dot { background: var(--red); }
 .status-sos .unit-status-dot { background: var(--red); animation: sos-pulse 0.5s ease-in-out infinite; box-shadow: var(--glow-red); }
+
+/* Unit card — row 2: meta info */
+.unit-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.unit-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+.unit-tag.speed {
+  background: rgba(79,142,247,0.12);
+  color: var(--accent);
+  font-family: var(--font);
+}
+.unit-tag.speed.fast { background: rgba(245,158,11,0.15); color: var(--amber); }
+.unit-tag.geocerca {
+  background: rgba(45,212,160,0.1);
+  color: var(--green);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Unit quick actions */
+.unit-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.unit-item:hover .unit-actions { opacity: 1; }
+
+.unit-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 11px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.unit-btn:hover { background: var(--bg4); color: var(--text0); border-color: var(--border-hi); }
+
+/* Search input */
+#unit-search-wrap {
+  padding: 0 16px 10px;
+  position: relative;
+}
+#unit-search {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px 7px 30px;
+  color: var(--text0);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+#unit-search:focus { border-color: var(--accent); }
+#unit-search::placeholder { color: var(--text2); }
+#unit-search-icon {
+  position: absolute;
+  left: 26px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text2);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+/* Filter tab badges */
+.filter-tab .tab-n {
+  display: inline-block;
+  background: var(--bg3);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 9px;
+  margin-left: 3px;
+  color: var(--text2);
+  font-weight: 600;
+  vertical-align: middle;
+}
+.filter-tab.active .tab-n { background: var(--bg4); color: var(--text1); }
 
 /* ═══════════════════════════════════════════
    MAP
@@ -1191,13 +1287,17 @@ html, body {
       </div>
     </div>
 
-    <!-- Filter -->
+    <!-- Search + Filter -->
     <div class="panel-section">
+      <div id="unit-search-wrap">
+        <span id="unit-search-icon">⌕</span>
+        <input id="unit-search" type="search" placeholder="Buscar unidad o conductor…" oninput="onSearchInput(this.value)" autocomplete="off">
+      </div>
       <div class="filter-tabs" id="filter-tabs">
-        <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">Todas</button>
-        <button class="filter-tab" data-filter="activo" onclick="setFilter('activo',this)">Activo</button>
-        <button class="filter-tab" data-filter="libre" onclick="setFilter('libre',this)">Libre</button>
-        <button class="filter-tab" data-filter="fuera_servicio" onclick="setFilter('fuera_servicio',this)">Fuera</button>
+        <button class="filter-tab active" data-filter="all"            onclick="setFilter('all',this)">Todas<span class="tab-n" id="tn-all">0</span></button>
+        <button class="filter-tab"        data-filter="activo"         onclick="setFilter('activo',this)">Activo<span class="tab-n" id="tn-activo">0</span></button>
+        <button class="filter-tab"        data-filter="libre"          onclick="setFilter('libre',this)">Libre<span class="tab-n" id="tn-libre">0</span></button>
+        <button class="filter-tab"        data-filter="fuera_servicio" onclick="setFilter('fuera_servicio',this)">Fuera<span class="tab-n" id="tn-fuera">0</span></button>
       </div>
     </div>
 
@@ -1360,6 +1460,7 @@ const STATE = {
   operator:     null,
   audioCtx:     null,
   archivedUnits: {},   // uid → resumen de unidades sin señal hoy
+  searchQuery:   '',   // filtro de búsqueda del operador
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -1844,6 +1945,23 @@ function toggleArchivedUnits() {
 /* ═══════════════════════════════════════════════════════
    STATS & UI UPDATES
 ═══════════════════════════════════════════════════════ */
+/** Devuelve el nombre corto de la geocerca donde está la unidad, o null */
+function getGeocercaLabel(lat, lng) {
+  if (!lat || !lng) return null;
+  for (const g of GEOCERCAS) {
+    if (haversineM(lat, lng, g.lat, g.lng) <= g.radius) return g.name || g.id;
+  }
+  return null;
+}
+
+/** Haversine en metros — misma fórmula que base/geocercas.js */
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function updateStats() {
   let active = 0, idle = 0, offline = 0, sos = 0;
   Object.values(STATE.units).forEach(u => {
@@ -1853,31 +1971,51 @@ function updateStats() {
     else if (s === 'libre') idle++;
     else if (s === 'fuera_servicio') offline++;
   });
+  const total = active + idle + offline;
   document.getElementById('stat-active').textContent  = active;
   document.getElementById('stat-idle').textContent    = idle;
   document.getElementById('stat-offline').textContent = offline;
   document.getElementById('stat-sos').textContent     = sos;
+
+  // Actualizar badges de los tabs de filtro
+  const el = id => document.getElementById(id);
+  if (el('tn-all'))    el('tn-all').textContent    = total;
+  if (el('tn-activo')) el('tn-activo').textContent = active;
+  if (el('tn-libre'))  el('tn-libre').textContent  = idle;
+  if (el('tn-fuera'))  el('tn-fuera').textContent  = offline;
+}
+
+function onSearchInput(val) {
+  STATE.searchQuery = val.trim().toLowerCase();
+  updateUnitList();
 }
 
 function updateUnitList() {
   const container = document.getElementById('unit-list');
 
-  // Build filtered + sorted list
+  // Construir lista con metadatos
   let units = Object.entries(STATE.units)
     .map(([uid, u]) => ({ uid, ...u, _status: normalizeStatus(u.estado) }));
 
-  // Sort: SOS > activo > libre > fuera_servicio, then by ID
+  // Ordenar: SOS > activo > libre > fuera_servicio, luego por ID numérico
   const order = { sos: 0, activo: 1, libre: 2, fuera_servicio: 3 };
   units.sort((a, b) => {
-    const oa = order[a._status] ?? 4;
-    const ob = order[b._status] ?? 4;
+    const oa = order[a._status] ?? 4, ob = order[b._status] ?? 4;
     if (oa !== ob) return oa - ob;
     return (a.unidadId || '').localeCompare(b.unidadId || '', 'es', { numeric: true });
   });
 
-  // Filter
+  // Filtro de estado
   if (STATE.activeFilter !== 'all') {
     units = units.filter(u => u._status === STATE.activeFilter);
+  }
+
+  // Filtro de búsqueda
+  if (STATE.searchQuery) {
+    units = units.filter(u =>
+      (u.unidadId  || '').toLowerCase().includes(STATE.searchQuery) ||
+      (u.conductor || '').toLowerCase().includes(STATE.searchQuery)
+    );
   }
 
   if (units.length === 0) {
@@ -1885,25 +2023,50 @@ function updateUnitList() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
       </svg>
-      Sin unidades en este filtro
+      ${STATE.searchQuery ? 'Sin resultados para "' + STATE.searchQuery + '"' : 'Sin unidades en este filtro'}
     </div>`;
     return;
   }
 
-  // Efficient DOM update — only rebuild if structure changed
   const fragment = document.createDocumentFragment();
   units.forEach(u => {
-    const el = document.createElement('div');
-    el.className = `unit-item status-${u._status}`;
+    const el      = document.createElement('div');
+    el.className  = `unit-item status-${u._status}`;
     el.dataset.uid = u.uid;
-    const elapsed = u.timestamp ? getElapsed(u.timestamp) : '—';
+
+    const elapsed   = u.timestamp ? getElapsed(u.timestamp) : '—';
+    const spd       = parseInt(u.speed) || 0;
+    const geocerca  = getGeocercaLabel(u.lat, u.lng);
+
+    // Badge de velocidad: solo si la unidad está en movimiento
+    const spdBadge = spd > 0
+      ? `<span class="unit-tag speed ${spd > 40 ? 'fast' : ''}">${spd} km/h</span>`
+      : '';
+
+    // Etiqueta de geocerca
+    const geoBadge = geocerca
+      ? `<span class="unit-tag geocerca" title="${geocerca}">${geocerca}</span>`
+      : '';
+
     el.innerHTML = `
-      <div class="unit-id">${u.unidadId || u.uid}</div>
-      <div class="unit-info">
-        <div class="unit-name">${u.conductor || 'Sin conductor'}</div>
-        <div class="unit-time">${elapsed}</div>
-      </div>
       <div class="unit-status-dot"></div>
+      <div class="unit-info" style="flex:1;overflow:hidden">
+        <div style="display:flex;align-items:baseline;gap:7px">
+          <span class="unit-id">${u.unidadId || u.uid}</span>
+          <span class="unit-name" style="flex:1">${u.conductor || 'Sin conductor'}</span>
+        </div>
+        <div class="unit-meta">
+          <span class="unit-time">${elapsed}</span>
+          ${spdBadge}
+          ${geoBadge}
+        </div>
+      </div>
+      <div class="unit-actions">
+        <button class="unit-btn" title="Centrar en mapa"
+          onclick="event.stopPropagation();focusUnit('${u.uid}')">⊕</button>
+        <button class="unit-btn" title="Radio"
+          onclick="event.stopPropagation();sendRadioTo('${u.unidadId || u.uid}')">📻</button>
+      </div>
     `;
     el.onclick = () => focusUnit(u.uid);
     fragment.appendChild(el);
