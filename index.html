@@ -346,6 +346,61 @@ html, body {
 .filter-tab:hover { color: var(--text0); background: var(--bg3); }
 .filter-tab.active { background: var(--bg4); color: var(--text0); font-weight: 600; }
 
+/* Archived units banner */
+#archived-banner {
+  display: none;
+  flex-direction: column;
+  margin: 4px 0 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+#archived-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text2);
+  border: none;
+  width: 100%;
+  text-align: left;
+  gap: 6px;
+}
+#archived-toggle:hover { background: var(--bg3); color: var(--text1); }
+#archived-toggle .arc-icon { font-size: 13px; }
+#archived-toggle .arc-count {
+  background: rgba(245,158,11,0.15);
+  color: var(--amber);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+  font-size: 11px;
+}
+#archived-list {
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--bg1);
+  max-height: 180px;
+  overflow-y: auto;
+}
+.archived-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--text3);
+  border-bottom: 1px solid var(--bg2);
+}
+.archived-item:last-child { border-bottom: none; }
+.archived-id   { font-weight: 600; color: var(--text2); min-width: 48px; }
+.archived-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archived-time { font-size: 10px; color: var(--text3); white-space: nowrap; }
+
 /* Unit list */
 #unit-list {
   display: flex;
@@ -1146,6 +1201,18 @@ html, body {
       </div>
     </div>
 
+    <!-- Unidades archivadas (sin señal desde ayer o antes) -->
+    <div id="archived-banner">
+      <button id="archived-toggle" onclick="toggleArchivedUnits()">
+        <span class="arc-icon">⊘</span>
+        <span>Sin señal hoy</span>
+        <span style="flex:1"></span>
+        <span class="arc-count" id="archived-count">0</span>
+        <span id="archived-chevron">▸</span>
+      </button>
+      <div id="archived-list"></div>
+    </div>
+
     <!-- Unit list -->
     <div id="unit-list-wrap">
       <div id="unit-list">
@@ -1292,6 +1359,7 @@ const STATE = {
   auth:         null,
   operator:     null,
   audioCtx:     null,
+  archivedUnits: {},   // uid → resumen de unidades sin señal hoy
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -1597,6 +1665,7 @@ function attachListeners() {
       upsertUnit(uid, normalized);
     });
 
+    cleanupStaleUnits();   // archivar unidades sin señal de días anteriores
     updateStats();
     updateUnitList();
     recalcGeocercas();
@@ -1648,6 +1717,118 @@ function detachListeners() {
   STATE.db.ref('.info/connected').off();
   STATE.listeners = [];
   listenersAttached = false;
+}
+
+/* ═══════════════════════════════════════════════════════
+   UNIT CLEANUP — Filtrar por día actual / estado activo
+   Unidades sin señal de días anteriores se archivan en
+   localStorage y se ocultan del mapa y la lista.
+═══════════════════════════════════════════════════════ */
+const ARCHIVE_KEY = 'shk_archived_units';
+
+function getTodayStart() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function loadArchivedUnits() {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    // Descartar archivos de días anteriores — cada día se empieza limpio
+    if (saved.fecha !== new Date().toLocaleDateString('es-MX')) {
+      localStorage.removeItem(ARCHIVE_KEY);
+      return;
+    }
+    STATE.archivedUnits = saved.unidades || {};
+  } catch(_) {
+    STATE.archivedUnits = {};
+  }
+}
+
+function saveArchivedUnits() {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
+      fecha: new Date().toLocaleDateString('es-MX'),
+      unidades: STATE.archivedUnits,
+    }));
+  } catch(_) {}
+}
+
+function cleanupStaleUnits() {
+  const todayStart = getTodayStart();
+  let changed = false;
+
+  Object.entries(STATE.units).forEach(([uid, unit]) => {
+    const ts     = unit.timestamp || 0;
+    const status = normalizeStatus(unit.estado);
+    const isActive = status === 'activo' || status === 'sos';
+    const isToday  = ts >= todayStart;
+
+    if (!isActive && !isToday) {
+      // Archivar: guardar resumen mínimo, retirar del mapa y del estado
+      STATE.archivedUnits[uid] = {
+        unidadId:  unit.unidadId || uid,
+        conductor: unit.conductor || '',
+        lastSeen:  ts,
+        estado:    unit.estado,
+      };
+      if (STATE.unitMarkers[uid]) {
+        map.removeLayer(STATE.unitMarkers[uid]);
+        delete STATE.unitMarkers[uid];
+      }
+      delete STATE.units[uid];
+      changed = true;
+    } else if (STATE.archivedUnits[uid]) {
+      // La unidad volvió a tener señal hoy — retirarla del archivo
+      delete STATE.archivedUnits[uid];
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveArchivedUnits();
+    renderArchivedBanner();
+  }
+}
+
+function renderArchivedBanner() {
+  const count   = Object.keys(STATE.archivedUnits).length;
+  const banner  = document.getElementById('archived-banner');
+  const countEl = document.getElementById('archived-count');
+  if (!banner || !countEl) return;
+
+  if (count === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'flex';
+  countEl.textContent  = count;
+}
+
+function toggleArchivedUnits() {
+  const list    = document.getElementById('archived-list');
+  const chevron = document.getElementById('archived-chevron');
+  if (!list) return;
+
+  const isOpen = list.style.display === 'flex';
+  list.style.display = isOpen ? 'none' : 'flex';
+  if (chevron) chevron.textContent = isOpen ? '▸' : '▾';
+
+  if (!isOpen) {
+    list.innerHTML = Object.entries(STATE.archivedUnits).map(([, u]) => {
+      const lastSeen = u.lastSeen
+        ? new Date(u.lastSeen).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+        : '—';
+      return `<div class="archived-item">
+        <span class="archived-id">${u.unidadId}</span>
+        <span class="archived-name">${u.conductor || 'Sin conductor'}</span>
+        <span class="archived-time">${lastSeen}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2036,6 +2217,8 @@ function doLogin() {
       document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
       document.getElementById('login-screen').style.display = 'none';
       showNotif(`Bienvenido, ${creds.alias}`, 'success');
+      loadArchivedUnits();   // restaurar archivo del día desde localStorage
+      renderArchivedBanner();
       attachListeners();
       addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
     })
