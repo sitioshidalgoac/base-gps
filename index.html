@@ -1247,10 +1247,12 @@ const FB_CONFIG = {
   appId: "1:140903781731:web:sitios-hidalgo"
 };
 
-const OPERATOR_CREDENTIALS = {
-  base:        { email: 'base@sitios-hidalgo.com',        pass: 'BaseHidalgo#2026',   alias: 'BASE CENTRAL' },
-  despachador: { email: 'alias@sitios-hidalgo.com',        pass: 'BaseHidalgo#2026',   alias: 'DESPACHADOR' },
-  admin:       { email: 'base@sitios-hidalgo.com',         pass: 'BaseHidalgo#2026',   alias: 'ADMINISTRADOR' }
+// Solo alias → email y nombre visible. Sin contraseñas en el cliente.
+// La autenticación real la valida Firebase Auth en el servidor.
+const OPERATOR_ALIASES = {
+  base:        { email: 'base@sitios-hidalgo.com',   alias: 'BASE CENTRAL'  },
+  despachador: { email: 'alias@sitios-hidalgo.com',  alias: 'DESPACHADOR'   },
+  admin:       { email: 'base@sitios-hidalgo.com',   alias: 'ADMINISTRADOR' }
 };
 
 /* ═══════════════════════════════════════════════════════
@@ -1490,6 +1492,7 @@ function normalizeStatus(estado) {
   const s = (estado || '').toLowerCase().replace(/\s+/g, '_');
   if (s === 'activo' || s === 'en_servicio') return 'activo';
   if (s === 'libre' || s === 'disponible') return 'libre';
+  if (s === 'ocupado' || s === 'en_viaje') return 'activo'; // conductor con pasajero → activo
   if (s === 'fuera_servicio' || s === 'fuera de servicio') return 'fuera_servicio';
   if (s === 'sos') return 'sos';
   return 'libre';
@@ -1600,8 +1603,8 @@ function attachListeners() {
     checkSOS();
   });
 
-  // SOS listener
-  const sosRef = rtdb.ref('/sos');
+  // SOS listener — escucha /alertas_sos (ruta real donde escriben conductores y Cloud Functions)
+  const sosRef = rtdb.ref('/alertas_sos');
   sosRef.on('child_added', snap => {
     const data = snap.val();
     if (!data) return;
@@ -1629,15 +1632,9 @@ function attachListeners() {
     const connected = snap.val();
     const statusEl = document.getElementById('firebase-status');
     const labelEl = statusEl.querySelector('.label');
-    if (connected) {
-      statusEl.className = 'online';
-      statusEl.classList.add('online');
-      labelEl.textContent = 'Conectado';
-    } else {
-      statusEl.className = '';
-      statusEl.classList.add('offline');
-      labelEl.textContent = 'Sin conexión';
-    }
+    statusEl.classList.toggle('online',  !!connected);
+    statusEl.classList.toggle('offline', !connected);
+    labelEl.textContent = connected ? 'Conectado' : 'Sin conexión';
   });
 
   STATE.listeners.push({ ref: unitsRef, event: 'value', handler: onUnits });
@@ -1876,7 +1873,8 @@ function clearChatMessages() {
     </svg>
     Sin mensajes de radio
   </div>`;
-  chatKeys.clear();
+  // No limpiar chatKeys: el listener de Firebase sigue activo y re-emitiría
+  // todos los mensajes anteriores si perdemos las claves de deduplicación.
   STATE.chatBadge = 0;
 }
 
@@ -2022,27 +2020,38 @@ function doLogin() {
 
   errEl.textContent = '';
 
-  // PASO 1 — Validación local primero (sin Firebase)
-  const creds = OPERATOR_CREDENTIALS[alias];
-  if (!creds || creds.pass !== pass) {
-    errEl.textContent = 'Alias o contraseña incorrectos';
+  const creds = OPERATOR_ALIASES[alias];
+  if (!creds) {
+    errEl.textContent = 'Alias incorrecto';
     return;
   }
 
-  // PASO 2 — Login local exitoso, entrar inmediatamente
-  STATE.operator = { ...creds };
-  document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
-  document.getElementById('login-screen').style.display = 'none';
-  showNotif(`Bienvenido, ${creds.alias}`, 'success');
-  attachListeners();
-  addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
-
-  // PASO 3 — Intentar Firebase Auth en segundo plano (opcional)
   btn.disabled = true;
-  STATE.auth.signInWithEmailAndPassword(creds.email, creds.pass)
-    .then(() => { console.log('[Auth] Firebase OK'); })
-    .catch(err => { console.warn('[Auth] Firebase opcional falló:', err.code); })
-    .finally(() => { btn.disabled = false; btn.textContent = 'ENTRAR AL SISTEMA'; });
+  btn.textContent = 'VERIFICANDO...';
+
+  // Firebase Auth es el único gate — sin validación local, sin contraseñas en el cliente
+  STATE.auth.signInWithEmailAndPassword(creds.email, pass)
+    .then(() => {
+      STATE.operator = { ...creds };
+      document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
+      document.getElementById('login-screen').style.display = 'none';
+      showNotif(`Bienvenido, ${creds.alias}`, 'success');
+      attachListeners();
+      addAlert({ type: 'info', title: 'Sesión iniciada', desc: `Operador: ${creds.alias}`, time: new Date() });
+    })
+    .catch(err => {
+      const msg =
+        err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
+          ? 'Contraseña incorrecta'
+          : err.code === 'auth/too-many-requests'
+          ? 'Demasiados intentos. Espere unos minutos.'
+          : 'Error de conexión. Verifique internet.';
+      errEl.textContent = msg;
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'ENTRAR AL SISTEMA';
+    });
 }
 
 function doLogout() {
