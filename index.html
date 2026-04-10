@@ -1558,11 +1558,12 @@ function createUnitIcon(unit) {
 
 function normalizeStatus(estado) {
   const s = (estado || '').toLowerCase().replace(/\s+/g, '_');
-  if (s === 'activo' || s === 'en_servicio') return 'activo';
-  if (s === 'libre' || s === 'disponible') return 'libre';
-  if (s === 'ocupado' || s === 'en_viaje') return 'activo'; // conductor con pasajero → activo
+  if (s === 'activo'  || s === 'en_servicio')           return 'activo';
+  if (s === 'ocupado' || s === 'en_viaje')              return 'activo'; // conductor con pasajero
+  if (s === 'libre'   || s === 'disponible')            return 'libre';
   if (s === 'fuera_servicio' || s === 'fuera de servicio') return 'fuera_servicio';
-  if (s === 'sos') return 'sos';
+  if (s === 'offline' || s === 'descanso')              return 'fuera_servicio'; // CF y onDisconnect
+  if (s === 'sos')                                      return 'sos';
   return 'libre';
 }
 
@@ -1653,12 +1654,14 @@ function attachListeners() {
     Object.entries(data).forEach(([uid, unit]) => {
       if (!unit) return;
       const normalized = {
-        unidadId: unit.unidadId || uid,
-        conductor: unit.conductor || unit.nombre || '',
-        estado: unit.estado || unit.status || 'libre',
-        lat: parseFloat(unit.lat) || parseFloat(unit.latitude) || null,
-        lng: parseFloat(unit.lng) || parseFloat(unit.longitude) || null,
-        speed: unit.speed || unit.velocidad || 0,
+        // conductor escribe 'id' y 'name'; soportar ambas convenciones
+        unidadId:  unit.unidadId  || unit.id    || uid,
+        conductor: unit.conductor || unit.nombre || unit.name || '',
+        // conductor escribe 'status' (uppercase); base puede escribir 'estado'
+        estado:    unit.estado    || unit.status || 'libre',
+        lat:       parseFloat(unit.lat)       || parseFloat(unit.latitude)  || null,
+        lng:       parseFloat(unit.lng)       || parseFloat(unit.longitude) || null,
+        speed:     unit.speed     || unit.velocidad || 0,
         timestamp: unit.timestamp || unit.lastUpdate || Date.now(),
       };
       // Si está archivada y sigue siendo stale, no la re-insertamos
