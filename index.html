@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SHidalgo Kué'in — Base Central v4.0</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Google Maps API — reemplaza con tu clave restringida a shidalgogps.com -->
+<script>window.GOOGLE_MAPS_KEY = 'AIzaSyDEu6dOk9mUqXp52lyY6vBEm4GAsgU0ESU';</script>
 <!-- Firebase compat v10 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -588,26 +588,24 @@ html, body {
   height: 100%;
 }
 
-/* Leaflet dark theme overrides */
-.leaflet-container {
-  background: #0a0c10;
-  font-family: var(--font-ui);
-}
-
-.leaflet-tile { filter: brightness(0.65) saturate(0.4) hue-rotate(195deg); }
-
-.leaflet-control-zoom a {
+/* Google Maps dark theme overrides */
+.gm-style .gm-style-iw-c {
   background: var(--bg2) !important;
-  color: var(--text0) !important;
-  border-color: var(--border) !important;
+  border: 1px solid var(--border-hi) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: 0 !important;
+  max-width: 260px !important;
 }
-.leaflet-control-zoom a:hover { background: var(--bg3) !important; }
-
-.leaflet-control-attribution {
-  background: rgba(10,12,16,0.7) !important;
-  color: var(--text2) !important;
-  font-size: 10px !important;
-}
+.gm-style .gm-style-iw-d { overflow: hidden !important; }
+.gm-style .gm-style-iw-tc::after { background: var(--bg2) !important; }
+.gm-style .gm-style-iw-chr { display: none !important; }
+.gm-style-cc { display: none !important; }
+.gm-control-active { background: var(--bg2) !important; }
+.gmnoprint a, .gmnoprint span { display: none !important; }
+.gm-style .gmnoprint div { background: var(--bg2) !important; border-color: var(--border) !important; }
+/* Hide Google Maps copyright / attribution clutter */
+a[href^="https://maps.google.com/maps"] { display: none !important; }
 
 /* Custom markers */
 .unit-marker-wrap {
@@ -664,19 +662,115 @@ html, body {
   box-shadow: var(--glow-blue), 0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* Popup styling */
-.leaflet-popup-content-wrapper {
+/* ═══════════════════════════════════════════
+   NUEVO SERVICIO MODAL
+═══════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.hidden { display: none; }
+.modal-dialog {
+  background: var(--bg1);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14px;
+}
+.modal-header button {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.modal-header button:hover { color: var(--text0); background: var(--bg3); }
+.modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text0);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  transition: border-color var(--transition);
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--border-hi); }
+.form-group select option { background: var(--bg2); }
+.form-group textarea { resize: vertical; min-height: 64px; }
+/* Places autocomplete dropdown */
+.pac-container {
   background: var(--bg2) !important;
   border: 1px solid var(--border-hi) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-lg) !important;
-  padding: 0 !important;
+  font-family: var(--font-ui) !important;
 }
-.leaflet-popup-content {
-  margin: 0 !important;
-  color: var(--text0) !important;
+.pac-item { color: var(--text1) !important; border-color: var(--border) !important; padding: 6px 12px !important; }
+.pac-item:hover, .pac-item-selected { background: var(--bg3) !important; }
+.pac-item-query { color: var(--text0) !important; }
+.pac-matched { color: var(--accent) !important; }
+.pac-icon { filter: invert(1) opacity(0.4); }
+.btn-cancel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text1);
+  padding: 9px 20px;
+  cursor: pointer;
+  font-size: 13px;
 }
-.leaflet-popup-tip-container { display: none !important; }
+.btn-cancel:hover { border-color: var(--border-hi); color: var(--text0); }
+.btn-submit {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  padding: 9px 24px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.btn-submit:hover { background: #6fa3f9; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .popup-inner {
   padding: 14px 16px;
@@ -1201,6 +1295,48 @@ html, body {
 </head>
 <body>
 
+<!-- MODAL NUEVO SERVICIO -->
+<div id="modal-nuevo-servicio" class="modal-overlay hidden">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <span>+ Nuevo Servicio Manual</span>
+      <button onclick="cerrarNuevoServicio()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Cliente</label>
+        <input id="ns-cliente" type="text" placeholder="Nombre del pasajero" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input id="ns-telefono" type="tel" placeholder="(Sin clave de país)">
+      </div>
+      <div class="form-group">
+        <label>Origen (punto de recogida)</label>
+        <input id="ns-origen" type="text" placeholder="Busca la dirección o escribe la referencia…" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Destino *</label>
+        <input id="ns-destino" type="text" placeholder="¿A dónde va el pasajero?" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Asignar a unidad (opcional)</label>
+        <select id="ns-unidad">
+          <option value="">— Cualquier unidad disponible —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notas para el conductor</label>
+        <textarea id="ns-notas" placeholder="Señas de la casa, referencias, equipaje, etc."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="cerrarNuevoServicio()">Cancelar</button>
+      <button class="btn-submit" id="ns-submit-btn" onclick="submitNuevoServicio()">Despachar</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOADER -->
 <div id="loader">
   <div class="loader-ring"></div>
@@ -1255,6 +1391,7 @@ html, body {
     <div class="divider"></div>
     <span id="operator-label" style="font-size:12px;color:var(--text2)">—</span>
     <div class="spacer"></div>
+    <button class="btn-sm" style="background:var(--accent);color:white;border-color:var(--accent)" onclick="abrirNuevoServicio()" data-tip="Crear servicio manual">+ Nuevo Servicio</button>
     <button class="btn-sm" onclick="centerMap()" data-tip="Centrar mapa en Nochixtlán">⊕ Centro</button>
     <button class="btn-sm danger" onclick="doLogout()">Salir</button>
     <div id="clock">—</div>
@@ -1443,10 +1580,10 @@ const MAP_ZOOM   = 15;
 ═══════════════════════════════════════════════════════ */
 const STATE = {
   units:        {},      // uid → unit data
-  unitMarkers:  {},      // uid → Leaflet marker
+  unitMarkers:  {},      // uid → google.maps.Marker
   geocercaCounts: {},    // geocercaId → Set of uids
-  geocercaCircles:[],    // Leaflet circle layers
-  geocercaMarkers:[],    // Leaflet markers for bases
+  geocercaCircles:[],    // google.maps.Circle layers
+  geocercaMarkers:[],    // google.maps.Marker for bases
   activeFilter:  'all',
   showBases:    true,
   showCircles:  true,
@@ -1477,64 +1614,103 @@ STATE.auth = firebase.auth();
 STATE.db   = firebase.database();
 
 /* ═══════════════════════════════════════════════════════
-   MAP INIT
+   MAP INIT — Google Maps SDK
 ═══════════════════════════════════════════════════════ */
 let map;
+let gInfoWindow; // shared InfoWindow instance
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#141720' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9ba0bc' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f1117' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1c2030' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.neighborhood', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#242840' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1c2030' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#5a6080' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#323660' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#9ba0bc' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0c10' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3d5a6e' }] },
+];
 
 function initMap() {
-  map = L.map('map', {
-    center: MAP_CENTER,
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: MAP_CENTER[0], lng: MAP_CENTER[1] },
     zoom: MAP_ZOOM,
+    styles: DARK_MAP_STYLE,
+    disableDefaultUI: false,
     zoomControl: true,
-    attributionControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    gestureHandling: 'greedy',
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19,
-    opacity: 1,
-  }).addTo(map);
+  gInfoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
 
   initGeocercas();
 }
 
 /* ═══════════════════════════════════════════════════════
-   GEOCERCAS — init circles & markers
+   GEOCERCAS — init circles & markers (Google Maps)
 ═══════════════════════════════════════════════════════ */
+function createBaseIcon(id) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38">
+    <defs><linearGradient id="bg${id}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f8ef7"/><stop offset="100%" stop-color="#7c5af7"/>
+    </linearGradient></defs>
+    <circle cx="19" cy="19" r="17" fill="url(#bg${id})" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+    <text x="19" y="23" text-anchor="middle" fill="white" font-family="monospace" font-size="8" font-weight="700">${id}</text>
+  </svg>`;
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(38, 38),
+    anchor: new google.maps.Point(19, 19),
+  };
+}
+
 function initGeocercas() {
   // Reset geocerca counts
   GEOCERCAS.forEach(g => { STATE.geocercaCounts[g.id] = new Set(); });
 
   // Clear old layers
-  STATE.geocercaCircles.forEach(l => map.removeLayer(l));
-  STATE.geocercaMarkers.forEach(l => map.removeLayer(l));
+  STATE.geocercaCircles.forEach(c => c.setMap(null));
+  STATE.geocercaMarkers.forEach(m => m.setMap(null));
   STATE.geocercaCircles = [];
   STATE.geocercaMarkers = [];
 
   GEOCERCAS.forEach(g => {
-    // Circle
-    const circle = L.circle([g.lat, g.lng], {
+    // Geofence circle
+    const circle = new google.maps.Circle({
+      center: { lat: g.lat, lng: g.lng },
       radius: g.radius,
-      color: 'rgba(79,142,247,0.5)',
+      map,
+      strokeColor: 'rgba(79,142,247,0.6)',
+      strokeOpacity: 1,
+      strokeWeight: 1.5,
       fillColor: 'rgba(79,142,247,0.06)',
       fillOpacity: 1,
-      weight: 1.5,
-      dashArray: '6 4',
-    }).addTo(map);
-
+    });
     STATE.geocercaCircles.push(circle);
 
     // Base marker
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="base-marker">${g.id}</div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
+    const marker = new google.maps.Marker({
+      position: { lat: g.lat, lng: g.lng },
+      map,
+      icon: createBaseIcon(g.id),
+      title: g.name,
+      zIndex: 10,
     });
 
-    const marker = L.marker([g.lat, g.lng], { icon })
-      .addTo(map)
-      .bindPopup(createBasePopup(g), { className: 'custom-popup' });
+    marker.addListener('click', () => {
+      gInfoWindow.setContent(createBasePopup(g));
+      gInfoWindow.open({ anchor: marker, map });
+    });
 
     STATE.geocercaMarkers.push(marker);
   });
@@ -1636,25 +1812,39 @@ function renderGeocercaPanel() {
       <div class="geocerca-units">${unitIds || '— sin unidades —'}</div>
     `;
     card.onclick = () => {
-      map.setView([g.lat, g.lng], 17, { animate: true });
-      STATE.geocercaMarkers[GEOCERCAS.indexOf(g)]?.openPopup();
+      map.panTo({ lat: g.lat, lng: g.lng });
+      map.setZoom(17);
+      const gm = STATE.geocercaMarkers[GEOCERCAS.indexOf(g)];
+      if (gm) { gInfoWindow.setContent(createBasePopup(g)); gInfoWindow.open({ anchor: gm, map }); }
     };
     container.appendChild(card);
   });
 }
 
 /* ═══════════════════════════════════════════════════════
-   UNIT MARKERS — diff-based update, no flicker
+   UNIT MARKERS — diff-based update, no flicker (Google Maps)
 ═══════════════════════════════════════════════════════ */
 function createUnitIcon(unit) {
-  const id = unit.unidadId || '?';
-  const statusClass = normalizeStatus(unit.estado);
-  return L.divIcon({
-    className: '',
-    html: `<div class="unit-marker ${statusClass}" title="${id}">${id}</div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-  });
+  const id = String(unit.unidadId || '?').substring(0, 4);
+  const status = normalizeStatus(unit.estado);
+  const C = {
+    activo:         { bg: '#1a6b4a', border: '#2dd4a0' },
+    libre:          { bg: '#7a4e10', border: '#f59e0b' },
+    fuera_servicio: { bg: '#6b1a2a', border: '#f04060' },
+    sos:            { bg: '#8b0000', border: '#ff3355' },
+  }[status] || { bg: '#242840', border: '#9ba0bc' };
+  const fs = id.length > 3 ? 8 : id.length > 2 ? 9 : 11;
+  const glow = status === 'sos' ? `<circle cx="22" cy="22" r="21" fill="none" stroke="${C.border}" stroke-width="1" opacity="0.4"/>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">
+    ${glow}
+    <circle cx="22" cy="22" r="19" fill="${C.bg}" stroke="${C.border}" stroke-width="2.5"/>
+    <text x="22" y="26" text-anchor="middle" fill="white" font-family="monospace" font-size="${fs}" font-weight="700">${id}</text>
+  </svg>`;
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(44, 44),
+    anchor: new google.maps.Point(22, 22),
+  };
 }
 
 function normalizeStatus(estado) {
@@ -1674,26 +1864,27 @@ function upsertUnit(uid, data) {
 
   if (!data.lat || !data.lng) return;
 
-  const statusClass = normalizeStatus(data.estado);
-
   if (!STATE.unitMarkers[uid]) {
-    // Create new marker
-    const icon = createUnitIcon(data);
-    const marker = L.marker([data.lat, data.lng], { icon })
-      .addTo(map)
-      .bindPopup('', { className: 'custom-popup', maxWidth: 240 });
+    // Create new Google Maps marker
+    const marker = new google.maps.Marker({
+      position: { lat: data.lat, lng: data.lng },
+      map,
+      icon: createUnitIcon(data),
+      title: String(data.unidadId || uid),
+      zIndex: 20,
+    });
 
-    marker.on('click', () => updatePopup(uid, marker));
+    marker.addListener('click', () => updatePopup(uid, marker));
     STATE.unitMarkers[uid] = marker;
   } else {
     // Update existing — only move if position changed significantly (>0.5m)
     const marker = STATE.unitMarkers[uid];
-    const prevPos = marker.getLatLng();
-    const moved = haversineM(prevPos.lat, prevPos.lng, data.lat, data.lng) > 0.5;
+    const prevPos = marker.getPosition();
+    const moved = haversineM(prevPos.lat(), prevPos.lng(), data.lat, data.lng) > 0.5;
     if (moved) {
-      marker.setLatLng([data.lat, data.lng]);
+      marker.setPosition({ lat: data.lat, lng: data.lng });
     }
-    // Update icon if status changed
+    // Update icon only if status changed
     if (!prev || prev.estado !== data.estado) {
       marker.setIcon(createUnitIcon(data));
     }
@@ -1709,20 +1900,21 @@ function updatePopup(uid, marker) {
   const statusLabel = { activo: 'Con servicio', libre: 'Disponible', fuera_servicio: 'Fuera de servicio', sos: '⚡ SOS' }[statusClass] || unit.estado;
   const updated = unit.timestamp ? new Date(unit.timestamp).toLocaleTimeString('es-MX') : '—';
 
-  marker.setPopupContent(`<div class="popup-inner">
-    <div class="popup-id">${unit.unidadId || uid}</div>
-    <div class="popup-name">${unit.conductor || 'Sin conductor'}</div>
+  gInfoWindow.setContent(`<div class="popup-inner">
+    <div class="popup-id">${escapeHtml(String(unit.unidadId || uid))}</div>
+    <div class="popup-name">${escapeHtml(unit.conductor || 'Sin conductor')}</div>
     <div class="popup-row"><span>Estado</span><span class="badge ${statusClass === 'activo' ? 'green' : statusClass === 'libre' ? 'amber' : 'red'}">${statusLabel}</span></div>
     <div class="popup-row"><span>Base cercana</span><span>${nearest} (${distStr})</span></div>
     <div class="popup-row"><span>Velocidad</span><span>${unit.speed ? unit.speed.toFixed(0)+' km/h' : '0 km/h'}</span></div>
     <div class="popup-row"><span>Últ. señal</span><span>${updated}</span></div>
-    <button class="popup-btn" onclick="sendRadioTo('${unit.unidadId || uid}')">📻 Mensaje al conductor</button>
+    <button class="popup-btn" onclick="sendRadioTo('${escapeHtml(String(unit.unidadId || uid))}')">📻 Mensaje al conductor</button>
   </div>`);
+  gInfoWindow.open({ anchor: marker, map });
 }
 
 function removeUnit(uid) {
   if (STATE.unitMarkers[uid]) {
-    map.removeLayer(STATE.unitMarkers[uid]);
+    STATE.unitMarkers[uid].setMap(null);
     delete STATE.unitMarkers[uid];
   }
   delete STATE.units[uid];
@@ -1887,7 +2079,7 @@ function cleanupStaleUnits() {
         estado:    unit.estado,
       };
       if (STATE.unitMarkers[uid]) {
-        map.removeLayer(STATE.unitMarkers[uid]);
+        STATE.unitMarkers[uid].setMap(null);
         delete STATE.unitMarkers[uid];
       }
       delete STATE.units[uid];
@@ -2284,29 +2476,26 @@ function setFilter(filter, btn) {
 function focusUnit(uid) {
   const unit = STATE.units[uid];
   if (!unit?.lat || !unit?.lng) { showNotif('Unidad sin señal GPS', 'warning'); return; }
-  map.setView([unit.lat, unit.lng], 17, { animate: true });
+  map.panTo({ lat: unit.lat, lng: unit.lng });
+  map.setZoom(17);
   if (STATE.unitMarkers[uid]) {
-    STATE.unitMarkers[uid].openPopup();
     updatePopup(uid, STATE.unitMarkers[uid]);
   }
 }
 
 function centerMap() {
-  map.setView(MAP_CENTER, MAP_ZOOM, { animate: true });
+  map.panTo({ lat: MAP_CENTER[0], lng: MAP_CENTER[1] });
+  map.setZoom(MAP_ZOOM);
 }
 
 function toggleLayer(layer, btn) {
   btn.classList.toggle('active');
   if (layer === 'bases') {
     STATE.showBases = !STATE.showBases;
-    STATE.geocercaMarkers.forEach(m => {
-      STATE.showBases ? m.addTo(map) : map.removeLayer(m);
-    });
+    STATE.geocercaMarkers.forEach(m => m.setMap(STATE.showBases ? map : null));
   } else if (layer === 'circles') {
     STATE.showCircles = !STATE.showCircles;
-    STATE.geocercaCircles.forEach(c => {
-      STATE.showCircles ? c.addTo(map) : map.removeLayer(c);
-    });
+    STATE.geocercaCircles.forEach(c => c.setMap(STATE.showCircles ? map : null));
   }
 }
 
@@ -2331,6 +2520,114 @@ function switchTab(tab) {
     document.getElementById('alerts-tab').classList.add('active');
     STATE.alertBadge = 0;
     document.getElementById('badge-alerts').classList.remove('visible');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   NUEVO SERVICIO — Places Autocomplete + Firebase write
+═══════════════════════════════════════════════════════ */
+let nsOrigenAutocomplete = null;
+let nsDestinoAutocomplete = null;
+let nsOrigenPlace = null;
+let nsDestinoPlace = null;
+
+const NOCHISTLAN_BOUNDS = {
+  north: 17.48, south: 17.44, east: -97.21, west: -97.25,
+};
+
+function initPlacesAutocomplete() {
+  if (typeof google === 'undefined' || !google.maps.places) return;
+
+  const bounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(NOCHISTLAN_BOUNDS.south, NOCHISTLAN_BOUNDS.west),
+    new google.maps.LatLng(NOCHISTLAN_BOUNDS.north, NOCHISTLAN_BOUNDS.east)
+  );
+  const acOptions = {
+    bounds,
+    componentRestrictions: { country: 'mx' },
+    fields: ['geometry', 'formatted_address', 'name'],
+    strictBounds: false,
+  };
+
+  const origenInput = document.getElementById('ns-origen');
+  const destinoInput = document.getElementById('ns-destino');
+
+  nsOrigenAutocomplete = new google.maps.places.Autocomplete(origenInput, acOptions);
+  nsDestinoAutocomplete = new google.maps.places.Autocomplete(destinoInput, acOptions);
+
+  nsOrigenAutocomplete.addListener('place_changed', () => {
+    nsOrigenPlace = nsOrigenAutocomplete.getPlace();
+  });
+  nsDestinoAutocomplete.addListener('place_changed', () => {
+    nsDestinoPlace = nsDestinoAutocomplete.getPlace();
+  });
+}
+
+function abrirNuevoServicio() {
+  if (!STATE.operator) return;
+  // Populate units dropdown
+  const sel = document.getElementById('ns-unidad');
+  sel.innerHTML = '<option value="">— Cualquier unidad disponible —</option>';
+  Object.entries(STATE.units)
+    .filter(([, u]) => normalizeStatus(u.estado) === 'libre')
+    .forEach(([uid, u]) => {
+      const opt = document.createElement('option');
+      opt.value = u.unidadId || uid;
+      opt.textContent = `${u.unidadId || uid} — ${u.conductor || 'Sin nombre'}`;
+      sel.appendChild(opt);
+    });
+
+  // Reset form
+  ['ns-cliente','ns-telefono','ns-origen','ns-destino','ns-notas'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  nsOrigenPlace = null;
+  nsDestinoPlace = null;
+
+  document.getElementById('modal-nuevo-servicio').classList.remove('hidden');
+}
+
+function cerrarNuevoServicio() {
+  document.getElementById('modal-nuevo-servicio').classList.add('hidden');
+}
+
+async function submitNuevoServicio() {
+  const destino = document.getElementById('ns-destino').value.trim();
+  if (!destino) { showNotif('El destino es obligatorio', 'warning'); return; }
+
+  const btn = document.getElementById('ns-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Despachando...';
+
+  try {
+    const payload = {
+      cliente:    document.getElementById('ns-cliente').value.trim() || 'Sin nombre',
+      telefono:   document.getElementById('ns-telefono').value.trim() || '',
+      origen:     document.getElementById('ns-origen').value.trim() || '',
+      origen_lat: nsOrigenPlace?.geometry?.location?.lat() || null,
+      origen_lng: nsOrigenPlace?.geometry?.location?.lng() || null,
+      destino,
+      destino_lat: nsDestinoPlace?.geometry?.location?.lat() || null,
+      destino_lng: nsDestinoPlace?.geometry?.location?.lng() || null,
+      unidadId:   document.getElementById('ns-unidad').value || null,
+      conductorId: null,
+      estado:     'pendiente',
+      tipo:       'manual',
+      notas:      document.getElementById('ns-notas').value.trim() || '',
+      operador:   STATE.operator?.alias || 'base',
+      creadoEn:   firebase.database.ServerValue.TIMESTAMP,
+    };
+
+    await STATE.db.ref('solicitudes').push(payload);
+    showNotif('Servicio despachado correctamente', 'success');
+    addAlert({ type: 'info', title: 'Servicio creado', desc: `${payload.cliente} → ${destino}`, time: new Date() });
+    cerrarNuevoServicio();
+  } catch (err) {
+    console.error('Error despachando servicio:', err);
+    showNotif('Error al crear el servicio', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Despachar';
   }
 }
 
@@ -2383,8 +2680,9 @@ function doLogin() {
   btn.disabled = true;
   btn.textContent = 'VERIFICANDO...';
 
-  // Firebase Auth es el único gate — sin validación local, sin contraseñas en el cliente
-  STATE.auth.signInWithEmailAndPassword(creds.email, pass)
+  // Persistencia LOCAL: el token de sesión sobrevive al cierre del navegador
+  STATE.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .then(() => STATE.auth.signInWithEmailAndPassword(creds.email, pass))
     .then(() => {
       STATE.operator = { ...creds };
       document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
@@ -2414,7 +2712,7 @@ function doLogout() {
   if (!confirm('¿Cerrar sesión?')) return;
   detachListeners();
   // Remove all markers
-  Object.values(STATE.unitMarkers).forEach(m => map.removeLayer(m));
+  Object.values(STATE.unitMarkers).forEach(m => m.setMap(null));
   STATE.unitMarkers = {};
   STATE.units = {};
   STATE.sosActive = {};
@@ -2441,17 +2739,52 @@ document.addEventListener('keydown', e => {
 /* ═══════════════════════════════════════════════════════
    BOOT SEQUENCE
 ═══════════════════════════════════════════════════════ */
+// Google Maps SDK callback — llamado por el SDK cuando está listo
+window.initGoogleMaps = function() {
+  initMap();
+  startClock();
+  initPlacesAutocomplete();
+  document.getElementById('loader').classList.add('hidden');
+};
+
 window.addEventListener('DOMContentLoaded', () => {
-  // Loader → init map → hide loader
-  setTimeout(() => {
-    initMap();
-    startClock();
+  // Cargar Google Maps SDK dinámicamente con la key configurada
+  const gmScript = document.createElement('script');
+  gmScript.src = `https://maps.googleapis.com/maps/api/js?key=${window.GOOGLE_MAPS_KEY}&libraries=places&callback=initGoogleMaps&loading=async`;
+  gmScript.async = true;
+  gmScript.defer = true;
+  gmScript.onerror = () => {
+    console.error('Error cargando Google Maps SDK — verifica tu API key y restricciones de dominio');
     document.getElementById('loader').classList.add('hidden');
-  }, 800);
+  };
+  document.head.appendChild(gmScript);
 
   // Enter on password field
   document.getElementById('login-pass').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
+  });
+
+  // Auto-restore session: si el operador ya tiene token LOCAL válido, evitar login manual
+  STATE.auth.onAuthStateChanged(user => {
+    if (!user) return; // no hay sesión activa
+    if (STATE.operator) return; // ya estaba logueado en esta pestaña
+
+    // Buscar el alias correspondiente al email autenticado
+    const creds = Object.values(OPERATOR_ALIASES).find(c => c.email === user.email);
+    if (!creds) {
+      // Email no reconocido — cerrar sesión de seguridad
+      STATE.auth.signOut();
+      return;
+    }
+
+    // Restaurar sesión sin mostrar pantalla de login
+    STATE.operator = { ...creds };
+    document.getElementById('operator-label').textContent = `👤 ${creds.alias}`;
+    document.getElementById('login-screen').style.display = 'none';
+    loadArchivedUnits();
+    renderArchivedBanner();
+    attachListeners();
+    showNotif(`Sesión restaurada: ${creds.alias}`, 'success');
   });
 });
 
