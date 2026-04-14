@@ -2293,6 +2293,7 @@ function updateUnitList() {
         <button class="unit-btn" title="Radio"
           onclick="event.stopPropagation();sendRadioTo('${u.unidadId || u.uid}')">📻</button>
         ${u._status === 'activo' ? `<button class="unit-btn" title="Terminar Viaje" style="color:#4ade80" onclick="event.stopPropagation();terminarViaje('${u.uid}')">✓</button>` : ''}
+        ${(u._status === 'activo' || u._status === 'libre') ? `<button class="unit-btn" title="Terminar Turno" style="color:#f04060" onclick="event.stopPropagation();terminarTurno('${u.uid}')">⏻</button>` : ''}
       </div>
     `;
     el.onclick = () => focusUnit(u.uid);
@@ -2520,9 +2521,19 @@ function terminarViaje(uid) {
   if (!unit) return;
   const unitId = unit.unidadId || uid;
   if (!confirm(`¿Terminar viaje de unidad ${unitId}?`)) return;
-  STATE.db.ref('/unidades/' + uid + '/estado').set('libre')
+  STATE.db.ref('/unidades/' + uid).update({ estado: 'libre', status: 'libre' })
     .then(() => showNotif('Viaje terminado — Unidad ' + unitId + ' libre', 'success'))
     .catch(e => showNotif('Error al terminar viaje: ' + e.message, 'error'));
+}
+
+function terminarTurno(uid) {
+  const unit = STATE.units[uid];
+  if (!unit) return;
+  const unitId = unit.unidadId || uid;
+  if (!confirm(`¿Terminar turno de unidad ${unitId}? Quedará fuera de servicio.`)) return;
+  STATE.db.ref('/unidades/' + uid).update({ estado: 'fuera_servicio', status: 'fuera_servicio' })
+    .then(() => showNotif('Turno terminado — Unidad ' + unitId + ' fuera de servicio', 'success'))
+    .catch(e => showNotif('Error al terminar turno: ' + e.message, 'error'));
 }
 
 function setFilter(filter, btn) {
@@ -2660,7 +2671,9 @@ async function submitNuevoServicio() {
 
   try {
     const payload = {
-      cliente:    document.getElementById('ns-cliente').value.trim() || 'Sin nombre',
+      clienteNombre: document.getElementById('ns-cliente').value.trim() || 'Sin nombre',
+      cliente:       document.getElementById('ns-cliente').value.trim() || 'Sin nombre',
+      clienteTelefono: document.getElementById('ns-telefono').value.trim() || '',
       telefono:   document.getElementById('ns-telefono').value.trim() || '',
       origen:     document.getElementById('ns-origen').value.trim() || '',
       origen_lat: nsOrigenPlace?.geometry?.location?.lat() || null,
@@ -2670,7 +2683,7 @@ async function submitNuevoServicio() {
       destino_lng: nsDestinoPlace?.geometry?.location?.lng() || null,
       unidadId:   document.getElementById('ns-unidad').value || null,
       conductorId: null,
-      estado:     'pendiente',
+      estado:     'enviado',
       tipo:       'manual',
       notas:      document.getElementById('ns-notas').value.trim() || '',
       operador:   STATE.operator?.alias || 'base',
